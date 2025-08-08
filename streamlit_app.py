@@ -3,6 +3,7 @@ import cv2
 import pandas as pd
 import tempfile
 import numpy as np
+import os  # Added for file existence check
 
 # Try to import mediapipe, with fallback for deployment
 try:
@@ -17,7 +18,7 @@ except ImportError:
 st.set_page_config(page_title="Lumi Skeleton Overlay", layout="wide")
 
 # Build marker to verify latest deploy is running - FORCE DEPLOY
-st.caption("🚀 NEW BUILD: HH:MM:SS format • FILE UPLOAD FIX • Python 3.13 compatible")
+st.caption("🚀 NEW BUILD: HH:MM:SS format • VIDEO FIX • Python 3.13 compatible")
 
 st.title("🌸 Skeleton Overlay with Reference Timestamp 💚")
 st.write("Upload video + reference CSV → Overlay skeleton & motion text based on CSV timestamps.")
@@ -209,7 +210,9 @@ if uploaded_video and uploaded_csv:
         fps = cap.get(cv2.CAP_PROP_FPS)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        
+        # Use H.264 codec for better web compatibility
+        fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
         output_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
         out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
 
@@ -372,6 +375,23 @@ if uploaded_video and uploaded_csv:
         cap.release()
         out.release()
 
-        st.success("✅ Skeleton overlay video generated!")
-        st.video(output_video)
-        st.download_button("Download Motion Overlay Video", data=open(output_video,"rb"), file_name="skeleton_overlay.mp4") 
+        # Check if video was created successfully
+        if os.path.exists(output_video) and os.path.getsize(output_video) > 0:
+            st.success("✅ Skeleton overlay video generated!")
+            
+            # Read the video file for display and download
+            with open(output_video, "rb") as video_file:
+                video_bytes = video_file.read()
+            
+            # Display video
+            st.video(video_bytes)
+            
+            # Download button
+            st.download_button(
+                label="Download Motion Overlay Video",
+                data=video_bytes,
+                file_name="skeleton_overlay.mp4",
+                mime="video/mp4"
+            )
+        else:
+            st.error("❌ Failed to generate video. Please check your input files.") 
