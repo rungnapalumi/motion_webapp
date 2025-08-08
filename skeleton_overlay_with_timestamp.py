@@ -13,12 +13,94 @@ try:
     MEDIAPIPE_AVAILABLE = True
 except ImportError:
     MEDIAPIPE_AVAILABLE = False
-    st.warning("⚠️ MediaPipe not available - using simple skeleton overlay")
+    st.warning("⚠️ MediaPipe not available - using improved skeleton overlay")
+
+def detect_person_center(frame):
+    """Detect the center of the person in the frame using motion detection"""
+    # Convert to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    # Apply Gaussian blur
+    blurred = cv2.GaussianBlur(gray, (21, 21), 0)
+    
+    # Use adaptive threshold to find moving objects
+    thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    
+    # Find contours
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if contours:
+        # Find the largest contour (likely the person)
+        largest_contour = max(contours, key=cv2.contourArea)
+        
+        # Get bounding rectangle
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        
+        # Calculate center
+        center_x = x + w // 2
+        center_y = y + h // 2
+        
+        return center_x, center_y, w, h
+    
+    # Fallback to frame center
+    h, w = frame.shape[:2]
+    return w // 2, h // 2, w // 4, h // 2
+
+def draw_improved_skeleton(frame, center_x, center_y, width, height, line_color_bgr, dot_color_bgr, line_thickness, dot_radius):
+    """Draw an improved skeleton that adapts to the person's position and size"""
+    
+    # Calculate skeleton dimensions based on person size
+    skeleton_height = int(height * 0.8)
+    skeleton_width = int(width * 0.6)
+    
+    # Head (smaller and positioned better)
+    head_radius = max(5, int(skeleton_height * 0.08))
+    head_y = center_y - skeleton_height // 2 + head_radius
+    cv2.circle(frame, (center_x, head_y), head_radius, dot_color_bgr, -1)
+    
+    # Neck
+    neck_y = head_y + head_radius + 5
+    cv2.line(frame, (center_x, head_y + head_radius), (center_x, neck_y), line_color_bgr, line_thickness)
+    
+    # Shoulders
+    shoulder_y = neck_y + 10
+    shoulder_width = skeleton_width // 2
+    cv2.line(frame, (center_x - shoulder_width, shoulder_y), (center_x + shoulder_width, shoulder_y), line_color_bgr, line_thickness)
+    
+    # Arms
+    arm_length = skeleton_height // 3
+    # Left arm
+    cv2.line(frame, (center_x - shoulder_width, shoulder_y), (center_x - shoulder_width - 10, shoulder_y + arm_length), line_color_bgr, line_thickness)
+    # Right arm
+    cv2.line(frame, (center_x + shoulder_width, shoulder_y), (center_x + shoulder_width + 10, shoulder_y + arm_length), line_color_bgr, line_thickness)
+    
+    # Torso
+    torso_y = shoulder_y + 20
+    cv2.line(frame, (center_x, shoulder_y), (center_x, torso_y), line_color_bgr, line_thickness)
+    
+    # Hips
+    hip_y = torso_y + 15
+    hip_width = skeleton_width // 2
+    cv2.line(frame, (center_x - hip_width, hip_y), (center_x + hip_width, hip_y), line_color_bgr, line_thickness)
+    
+    # Legs
+    leg_length = skeleton_height // 2
+    # Left leg
+    cv2.line(frame, (center_x - hip_width, hip_y), (center_x - hip_width - 5, hip_y + leg_length), line_color_bgr, line_thickness)
+    # Right leg
+    cv2.line(frame, (center_x + hip_width, hip_y), (center_x + hip_width + 5, hip_y + leg_length), line_color_bgr, line_thickness)
+    
+    # Add some joints as dots
+    joint_radius = max(2, dot_radius // 2)
+    cv2.circle(frame, (center_x - shoulder_width, shoulder_y), joint_radius, dot_color_bgr, -1)  # Left shoulder
+    cv2.circle(frame, (center_x + shoulder_width, shoulder_y), joint_radius, dot_color_bgr, -1)  # Right shoulder
+    cv2.circle(frame, (center_x - hip_width, hip_y), joint_radius, dot_color_bgr, -1)  # Left hip
+    cv2.circle(frame, (center_x + hip_width, hip_y), joint_radius, dot_color_bgr, -1)  # Right hip
 
 st.set_page_config(page_title="Lumi Skeleton Overlay", layout="wide")
 
 # Build marker to verify latest deploy is running - FORCE DEPLOY
-st.caption("🚀 NEW BUILD: HH:MM:SS format • VIDEO PROCESSING FIX • Python 3.13 compatible")
+st.caption("🚀 NEW BUILD: HH:MM:SS format • IMPROVED SKELETON • Python 3.13 compatible")
 
 st.title("🌸 Skeleton Overlay with Reference Timestamp 💚")
 st.write("Upload video + reference CSV → Overlay skeleton & motion text based on CSV timestamps.")
@@ -293,22 +375,9 @@ if uploaded_video and uploaded_csv:
                                 y = int(landmark.y * height)
                                 cv2.circle(frame, (x, y), dot_radius, dot_color_bgr, -1)
                         else:
-                            # Fallback: draw simple skeleton if no pose detected
-                            h, w, _ = frame.shape
-                            center_x, center_y = w // 2, h // 2
-                            
-                            # Head
-                            cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
-                            
-                            # Body
-                            cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
-                            
-                            # Arms
-                            cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
-                            
-                            # Legs
-                            cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
-                            cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
+                            # Fallback: draw improved skeleton if no pose detected
+                            center_x, center_y, person_w, person_h = detect_person_center(frame)
+                            draw_improved_skeleton(frame, center_x, center_y, person_w, person_h, line_color_bgr, dot_color_bgr, line_thickness, dot_radius)
 
                         current_sec = int(frame_idx / fps)
 
@@ -357,22 +426,9 @@ if uploaded_video and uploaded_csv:
                     progress_bar.progress(progress)
                     status_text.text(f"Processing frame {frame_idx}/{total_frames}")
 
-                    # Simple skeleton drawing (fallback)
-                    h, w, _ = frame.shape
-                    center_x, center_y = w // 2, h // 2
-                    
-                    # Head
-                    cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
-                    
-                    # Body
-                    cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
-                    
-                    # Arms
-                    cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
-                    
-                    # Legs
-                    cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
-                    cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
+                    # Improved skeleton drawing (fallback)
+                    center_x, center_y, person_w, person_h = detect_person_center(frame)
+                    draw_improved_skeleton(frame, center_x, center_y, person_w, person_h, line_color_bgr, dot_color_bgr, line_thickness, dot_radius)
 
                     current_sec = int(frame_idx / fps)
 
