@@ -149,7 +149,7 @@ if uploaded_video and uploaded_csv:
             motion_df = motion_df.rename(columns={timestamp_col: 'timestamp'})
             st.success(f"✅ Found timestamp column: '{timestamp_col}' → renamed to 'timestamp'")
 
-    # Convert timestamp to seconds with better error handling
+    # Convert timestamp to seconds with better error handling - Updated for M:SS support
     def time_to_sec(t):
         try:
             # Handle M:SS or MM:SS format (your format) and HH:MM:SS format
