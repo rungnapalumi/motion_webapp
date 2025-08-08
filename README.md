@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Skeleton Overlay with Motion Detection
 
 A Streamlit application that overlays skeleton detection on videos with customizable colors and motion text based on CSV timestamps.
@@ -77,3 +78,11 @@ timestamp,motion1,motion2,motion3
 - **MediaPipe errors**: Normal warnings, doesn't affect functionality
 - **Color issues**: Make sure you're using the conda environment
 - **Video format**: Supports MP4, MOV, AVI formats 
+=======
+# Motion Detection with Timestamp WebApp
+
+Upload your presentation video and motion timestamp CSV file.
+The app will show a skeleton overlay with detected motions on the video.
+
+Built with Streamlit.
+>>>>>>> 86f7c5611a4ce4f6e60112a4d880c01dd1e1fa7e
