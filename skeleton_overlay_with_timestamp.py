@@ -36,7 +36,6 @@ line_color_option = st.sidebar.selectbox(
 
 if line_color_option == "Custom Color":
     line_color = st.sidebar.color_picker("Pick line color", "#FF0000")
-    # Convert hex to BGR (BGR order: Blue, Green, Red)
     line_color_bgr = (int(line_color[5:7], 16), int(line_color[3:5], 16), int(line_color[1:3], 16))
 else:
     line_color_bgr = preset_colors[line_color_option]
@@ -46,12 +45,11 @@ st.sidebar.subheader("Skeleton Dots")
 dot_color_option = st.sidebar.selectbox(
     "Choose dot color:",
     ["Custom Color"] + list(preset_colors.keys()),
-    index=8  # Default to White
+    index=8
 )
 
 if dot_color_option == "Custom Color":
     dot_color = st.sidebar.color_picker("Pick dot color", "#FFFFFF")
-    # Convert hex to BGR (BGR order: Blue, Green, Red)
     dot_color_bgr = (int(dot_color[5:7], 16), int(dot_color[3:5], 16), int(dot_color[1:3], 16))
 else:
     dot_color_bgr = preset_colors[dot_color_option]
@@ -87,12 +85,11 @@ st.sidebar.subheader("Movement Text Color")
 motion_color_option = st.sidebar.selectbox(
     "Choose movement text color:",
     ["Custom Color"] + list(preset_colors.keys()),
-    index=8  # Default to White
+    index=8
 )
 
 if motion_color_option == "Custom Color":
     motion_color = st.sidebar.color_picker("Pick movement text color", "#FFFFFF")
-    # Convert hex to BGR (BGR order: Blue, Green, Red)
     motion_color_bgr = (int(motion_color[5:7], 16), int(motion_color[3:5], 16), int(motion_color[1:3], 16))
 else:
     motion_color_bgr = preset_colors[motion_color_option]
