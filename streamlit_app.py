@@ -4,10 +4,20 @@ import pandas as pd
 import tempfile
 import numpy as np
 
+# Try to import mediapipe, with fallback for deployment
+try:
+    import mediapipe as mp
+    mp_drawing = mp.solutions.drawing_utils
+    mp_pose = mp.solutions.pose
+    MEDIAPIPE_AVAILABLE = True
+except ImportError:
+    MEDIAPIPE_AVAILABLE = False
+    st.warning("⚠️ MediaPipe not available - using simple skeleton overlay")
+
 st.set_page_config(page_title="Lumi Skeleton Overlay", layout="wide")
 
 # Build marker to verify latest deploy is running - FORCE DEPLOY
-st.caption("🚀 NEW BUILD: M:SS fix active • NO MEDIAPIPE • streamlit_app.py")
+st.caption("🚀 NEW BUILD: M:SS fix active • PROPER POSE DETECTION • streamlit_app.py")
 
 st.title("🌸 Skeleton Overlay with Reference Timestamp 💚")
 st.write("Upload video + reference CSV → Overlay skeleton & motion text based on CSV timestamps.")
@@ -189,67 +199,157 @@ if uploaded_video and uploaded_csv:
         margin_y = 20
         frame_idx = 0
 
-        # Simple pose detection using OpenCV
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
+        # Initialize MediaPipe Pose if available
+        if MEDIAPIPE_AVAILABLE:
+            with mp_pose.Pose(
+                min_detection_confidence=0.5,
+                min_tracking_confidence=0.5
+            ) as pose:
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
 
-            # Simple skeleton drawing (placeholder - you can enhance this)
-            # For now, we'll just draw some basic shapes to show the overlay works
-            h, w, _ = frame.shape
-            
-            # Draw a simple skeleton-like structure
-            center_x, center_y = w // 2, h // 2
-            
-            # Head
-            cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
-            
-            # Body
-            cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
-            
-            # Arms
-            cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
-            
-            # Legs
-            cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
-            cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
+                    # Convert BGR to RGB for MediaPipe
+                    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    results = pose.process(rgb_frame)
 
-            current_sec = int(frame_idx / fps)
-
-            row = motion_df[motion_df['time_sec'] == current_sec]
-            if not row.empty:
-                motions = [col for col in motion_cols if row.iloc[0][col] == 1]
-                if motions:
-                    text = " + ".join(motions)
-                    text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_font_thickness)
-
-                    if motion_position == "Bottom Right":
-                        text_x = width - text_size[0] - margin_x
-                        text_y = height - margin_y
-                    elif motion_position == "Bottom Left":
-                        text_x = margin_x
-                        text_y = height - margin_y
-                    elif motion_position == "Top Right":
-                        text_x = width - text_size[0] - margin_x
-                        text_y = margin_y + text_size[1]
-                    elif motion_position == "Top Left":
-                        text_x = margin_x
-                        text_y = margin_y + text_size[1]
-                    elif motion_position == "Center":
-                        text_x = (width - text_size[0]) // 2
-                        text_y = (height + text_size[1]) // 2
+                    # Draw pose landmarks
+                    if results.pose_landmarks:
+                        # Draw connections with custom colors
+                        for connection in mp_pose.POSE_CONNECTIONS:
+                            start_idx = connection[0]
+                            end_idx = connection[1]
+                            
+                            start_point = results.pose_landmarks.landmark[start_idx]
+                            end_point = results.pose_landmarks.landmark[end_idx]
+                            
+                            # Convert normalized coordinates to pixel coordinates
+                            start_x = int(start_point.x * width)
+                            start_y = int(start_point.y * height)
+                            end_x = int(end_point.x * width)
+                            end_y = int(end_point.y * height)
+                            
+                            # Draw the connection line
+                            cv2.line(frame, (start_x, start_y), (end_x, end_y), line_color_bgr, line_thickness)
+                        
+                        # Draw landmarks as dots
+                        for landmark in results.pose_landmarks.landmark:
+                            x = int(landmark.x * width)
+                            y = int(landmark.y * height)
+                            cv2.circle(frame, (x, y), dot_radius, dot_color_bgr, -1)
                     else:
-                        text_x = int((custom_x / 100) * width)
-                        text_y = int((custom_y / 100) * height)
+                        # Fallback: draw simple skeleton if no pose detected
+                        h, w, _ = frame.shape
+                        center_x, center_y = w // 2, h // 2
+                        
+                        # Head
+                        cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
+                        
+                        # Body
+                        cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
+                        
+                        # Arms
+                        cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
+                        
+                        # Legs
+                        cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
+                        cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
 
-                    cv2.putText(frame, text, (text_x, text_y),
-                                cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, (0,0,0), motion_font_thickness+2, cv2.LINE_AA)
-                    cv2.putText(frame, text, (text_x, text_y),
-                                cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_color_bgr, motion_font_thickness, cv2.LINE_AA)
+                    current_sec = int(frame_idx / fps)
 
-            out.write(frame)
-            frame_idx += 1
+                    row = motion_df[motion_df['time_sec'] == current_sec]
+                    if not row.empty:
+                        motions = [col for col in motion_cols if row.iloc[0][col] == 1]
+                        if motions:
+                            text = " + ".join(motions)
+                            text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_font_thickness)
+
+                            if motion_position == "Bottom Right":
+                                text_x = width - text_size[0] - margin_x
+                                text_y = height - margin_y
+                            elif motion_position == "Bottom Left":
+                                text_x = margin_x
+                                text_y = height - margin_y
+                            elif motion_position == "Top Right":
+                                text_x = width - text_size[0] - margin_x
+                                text_y = margin_y + text_size[1]
+                            elif motion_position == "Top Left":
+                                text_x = margin_x
+                                text_y = margin_y + text_size[1]
+                            elif motion_position == "Center":
+                                text_x = (width - text_size[0]) // 2
+                                text_y = (height + text_size[1]) // 2
+                            else:
+                                text_x = int((custom_x / 100) * width)
+                                text_y = int((custom_y / 100) * height)
+
+                            cv2.putText(frame, text, (text_x, text_y),
+                                        cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, (0,0,0), motion_font_thickness+2, cv2.LINE_AA)
+                            cv2.putText(frame, text, (text_x, text_y),
+                                        cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_color_bgr, motion_font_thickness, cv2.LINE_AA)
+
+                    out.write(frame)
+                    frame_idx += 1
+        else:
+            # Fallback for when MediaPipe is not available
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                # Simple skeleton drawing (fallback)
+                h, w, _ = frame.shape
+                center_x, center_y = w // 2, h // 2
+                
+                # Head
+                cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
+                
+                # Body
+                cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
+                
+                # Arms
+                cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
+                
+                # Legs
+                cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
+                cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
+
+                current_sec = int(frame_idx / fps)
+
+                row = motion_df[motion_df['time_sec'] == current_sec]
+                if not row.empty:
+                    motions = [col for col in motion_cols if row.iloc[0][col] == 1]
+                    if motions:
+                        text = " + ".join(motions)
+                        text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_font_thickness)
+
+                        if motion_position == "Bottom Right":
+                            text_x = width - text_size[0] - margin_x
+                            text_y = height - margin_y
+                        elif motion_position == "Bottom Left":
+                            text_x = margin_x
+                            text_y = height - margin_y
+                        elif motion_position == "Top Right":
+                            text_x = width - text_size[0] - margin_x
+                            text_y = margin_y + text_size[1]
+                        elif motion_position == "Top Left":
+                            text_x = margin_x
+                            text_y = margin_y + text_size[1]
+                        elif motion_position == "Center":
+                            text_x = (width - text_size[0]) // 2
+                            text_y = (height + text_size[1]) // 2
+                        else:
+                            text_x = int((custom_x / 100) * width)
+                            text_y = int((custom_y / 100) * height)
+
+                        cv2.putText(frame, text, (text_x, text_y),
+                                    cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, (0,0,0), motion_font_thickness+2, cv2.LINE_AA)
+                        cv2.putText(frame, text, (text_x, text_y),
+                                    cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_color_bgr, motion_font_thickness, cv2.LINE_AA)
+
+                out.write(frame)
+                frame_idx += 1
 
         cap.release()
         out.release()
