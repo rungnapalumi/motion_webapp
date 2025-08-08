@@ -1,12 +1,5 @@
-<<<<<<< HEAD
 streamlit>=1.48.0
 opencv-python>=4.11.0
 pandas>=2.3.1
 mediapipe>=0.10.21
-numpy>=1.26.4 
-=======
-streamlit
-opencv-python
-pandas
-numpy
->>>>>>> 86f7c5611a4ce4f6e60112a4d880c01dd1e1fa7e
+numpy>=1.26.4
