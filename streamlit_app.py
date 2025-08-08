@@ -17,7 +17,7 @@ except ImportError:
 st.set_page_config(page_title="Lumi Skeleton Overlay", layout="wide")
 
 # Build marker to verify latest deploy is running - FORCE DEPLOY
-st.caption("🚀 NEW BUILD: M:SS fix active • FALLBACK SKELETON • Python 3.13 compatible")
+st.caption("🚀 NEW BUILD: HH:MM:SS format • FALLBACK SKELETON • Python 3.13 compatible")
 
 st.title("🌸 Skeleton Overlay with Reference Timestamp 💚")
 st.write("Upload video + reference CSV → Overlay skeleton & motion text based on CSV timestamps.")
@@ -158,12 +158,12 @@ if uploaded_video and uploaded_csv:
                 return 0
             if ':' in s:
                 parts = s.split(':')
-                if len(parts) == 2:
-                    m, s2 = parts
-                    return int(m) * 60 + int(float(s2))
-                if len(parts) == 3:
+                if len(parts) == 3:  # HH:MM:SS format (preferred)
                     h, m, s2 = parts
                     return int(h) * 3600 + int(m) * 60 + int(float(s2))
+                elif len(parts) == 2:  # MM:SS format (fallback)
+                    m, s2 = parts
+                    return int(m) * 60 + int(float(s2))
             if s.replace('.', '').isdigit():
                 return int(float(s))
             st.error(f"❌ Unsupported timestamp format: {t}")
@@ -171,6 +171,9 @@ if uploaded_video and uploaded_csv:
         except Exception as e:
             st.error(f"❌ Error converting timestamp '{t}': {str(e)}")
             return 0
+
+    # Add helpful guidance for CSV format
+    st.info("💡 **CSV Format Guide:** Use HH:MM:SS format (e.g., 00:01:30 for 1 minute 30 seconds)")
 
     motion_df['time_sec'] = motion_df['timestamp'].apply(time_to_sec)
 
