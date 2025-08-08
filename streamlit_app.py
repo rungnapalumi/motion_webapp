@@ -17,7 +17,7 @@ except ImportError:
 st.set_page_config(page_title="Lumi Skeleton Overlay", layout="wide")
 
 # Build marker to verify latest deploy is running - FORCE DEPLOY
-st.caption("🚀 NEW BUILD: HH:MM:SS format • FALLBACK SKELETON • Python 3.13 compatible")
+st.caption("🚀 NEW BUILD: HH:MM:SS format • FILE UPLOAD FIX • Python 3.13 compatible")
 
 st.title("🌸 Skeleton Overlay with Reference Timestamp 💚")
 st.write("Upload video + reference CSV → Overlay skeleton & motion text based on CSV timestamps.")
@@ -125,8 +125,23 @@ if motion_position == "Custom":
     custom_x = st.sidebar.slider("X position (0-100%)", 0, 100, 80)
     custom_y = st.sidebar.slider("Y position (0-100%)", 0, 100, 80)
 
-uploaded_video = st.file_uploader("Upload a video", type=["mp4","mov","avi"])
-uploaded_csv = st.file_uploader("Upload reference CSV", type=["csv"])
+uploaded_video = st.file_uploader("Upload a video", type=["mp4","mov","avi"], help="Maximum file size: 200MB")
+uploaded_csv = st.file_uploader("Upload reference CSV", type=["csv"], help="Maximum file size: 10MB")
+
+# Add file size validation
+if uploaded_video:
+    if uploaded_video.size > 200 * 1024 * 1024:  # 200MB
+        st.error("❌ Video file too large! Maximum size is 200MB")
+        uploaded_video = None
+    else:
+        st.success(f"✅ Video uploaded: {uploaded_video.name} ({uploaded_video.size / (1024*1024):.1f}MB)")
+
+if uploaded_csv:
+    if uploaded_csv.size > 10 * 1024 * 1024:  # 10MB
+        st.error("❌ CSV file too large! Maximum size is 10MB")
+        uploaded_csv = None
+    else:
+        st.success(f"✅ CSV uploaded: {uploaded_csv.name} ({uploaded_csv.size / 1024:.1f}KB)")
 
 if uploaded_video and uploaded_csv:
     # Load CSV
