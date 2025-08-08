@@ -6,6 +6,9 @@ import tempfile
 
 st.set_page_config(page_title="Lumi Skeleton Overlay", layout="wide")
 
+# Build marker to verify latest deploy is running
+st.caption("Build: M:SS fix active • skeleton_overlay_with_timestamp.py")
+
 st.title("🌸 Skeleton Overlay with Reference Timestamp 💚")
 st.write("Upload video + reference CSV → Overlay skeleton & motion text based on CSV timestamps.")
 
@@ -122,64 +125,56 @@ uploaded_csv = st.file_uploader("Upload reference CSV", type=["csv"])
 if uploaded_video and uploaded_csv:
     # Load CSV
     motion_df = pd.read_csv(uploaded_csv)
-    
-    # Display CSV info for debugging
+
     st.write("📊 CSV Columns found:", list(motion_df.columns))
     st.write("📊 First few rows:")
     st.dataframe(motion_df.head())
 
-    # Check for timestamp column with various possible names
     timestamp_col = None
     possible_timestamp_names = ['timestamp', 'time', 'Time', 'Timestamp', 'TIME', 'TIMESTAMP', 'time_stamp', 'time_stamp_seconds']
-    
     for col in motion_df.columns:
         if col.lower() in [name.lower() for name in possible_timestamp_names]:
             timestamp_col = col
             break
-    
+
     if timestamp_col is None:
         st.error("❌ CSV must contain a 'timestamp' column. Found columns: " + ", ".join(motion_df.columns))
         st.stop()
     else:
-        # Rename the found timestamp column to 'timestamp' for consistency
         if timestamp_col != 'timestamp':
             motion_df = motion_df.rename(columns={timestamp_col: 'timestamp'})
             st.success(f"✅ Found timestamp column: '{timestamp_col}' → renamed to 'timestamp'")
 
-    # Convert timestamp to seconds with better error handling - Updated for M:SS support
     def time_to_sec(t):
         try:
-            # Handle M:SS or MM:SS format (your format) and HH:MM:SS format
-            if ':' in str(t):
-                parts = str(t).split(':')
-                if len(parts) == 2:
-                    m, s = parts
-                    return int(m)*60 + int(s)
-                elif len(parts) == 3:
-                    h, m, s = parts
-                    return int(h)*3600 + int(m)*60 + int(s)
-            # Handle seconds format
-            elif str(t).replace('.', '').isdigit():
-                return int(float(t))
-            else:
-                st.error(f"❌ Unsupported timestamp format: {t}")
+            s = str(t).strip()
+            if not s:
                 return 0
+            if ':' in s:
+                parts = s.split(':')
+                if len(parts) == 2:
+                    m, s2 = parts
+                    return int(m) * 60 + int(float(s2))
+                if len(parts) == 3:
+                    h, m, s2 = parts
+                    return int(h) * 3600 + int(m) * 60 + int(float(s2))
+            if s.replace('.', '').isdigit():
+                return int(float(s))
+            st.error(f"❌ Unsupported timestamp format: {t}")
+            return 0
         except Exception as e:
             st.error(f"❌ Error converting timestamp '{t}': {str(e)}")
             return 0
-    
+
     motion_df['time_sec'] = motion_df['timestamp'].apply(time_to_sec)
-    
-    # Show timestamp conversion info
+
     st.write("⏰ Timestamp conversion preview:")
     st.write("Original → Seconds")
-    for i, (orig, sec) in enumerate(zip(motion_df['timestamp'].head(), motion_df['time_sec'].head())):
+    for orig, sec in zip(motion_df['timestamp'].head(), motion_df['time_sec'].head()):
         st.write(f"{orig} → {sec}s")
 
-    # Determine motion columns (all except timestamp + time_sec)
     motion_cols = [c for c in motion_df.columns if c not in ['timestamp','time_sec']]
 
-    # Prepare video
     tfile = tempfile.NamedTemporaryFile(delete=False)
     tfile.write(uploaded_video.read())
     video_path = tfile.name
@@ -208,40 +203,28 @@ if uploaded_video and uploaded_csv:
                 results = pose.process(frame_rgb)
 
                 if results.pose_landmarks:
-                    # Draw skeleton with custom colors using manual drawing
                     landmarks = results.pose_landmarks.landmark
                     h, w, _ = frame.shape
-                    
-                    # Draw connections (lines)
-                    for connection in mp_pose.POSE_CONNECTIONS:
-                        start_idx = connection[0]
-                        end_idx = connection[1]
-                        
+
+                    for start_idx, end_idx in mp_pose.POSE_CONNECTIONS:
                         start_point = (int(landmarks[start_idx].x * w), int(landmarks[start_idx].y * h))
                         end_point = (int(landmarks[end_idx].x * w), int(landmarks[end_idx].y * h))
-                        
                         cv2.line(frame, start_point, end_point, line_color_bgr, line_thickness)
-                    
-                    # Draw landmarks (dots)
+
                     for landmark in landmarks:
                         x = int(landmark.x * w)
                         y = int(landmark.y * h)
                         cv2.circle(frame, (x, y), dot_radius, dot_color_bgr, -1)
 
-                # Current second
                 current_sec = int(frame_idx / fps)
-                timestamp_text = f"{int(current_sec//60)}:{int(current_sec%60):02d}"
 
-                # Lookup motion from reference CSV
                 row = motion_df[motion_df['time_sec'] == current_sec]
                 if not row.empty:
                     motions = [col for col in motion_cols if row.iloc[0][col] == 1]
                     if motions:
                         text = " + ".join(motions)
-
-                        # Calculate position based on selection
                         text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_font_thickness)
-                        
+
                         if motion_position == "Bottom Right":
                             text_x = width - text_size[0] - margin_x
                             text_y = height - margin_y
@@ -257,14 +240,12 @@ if uploaded_video and uploaded_csv:
                         elif motion_position == "Center":
                             text_x = (width - text_size[0]) // 2
                             text_y = (height + text_size[1]) // 2
-                        elif motion_position == "Custom":
+                        else:
                             text_x = int((custom_x / 100) * width)
                             text_y = int((custom_y / 100) * height)
 
-                        # Draw text with outline for better visibility
                         cv2.putText(frame, text, (text_x, text_y),
                                     cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, (0,0,0), motion_font_thickness+2, cv2.LINE_AA)
-                        # Main text color
                         cv2.putText(frame, text, (text_x, text_y),
                                     cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_color_bgr, motion_font_thickness, cv2.LINE_AA)
 
