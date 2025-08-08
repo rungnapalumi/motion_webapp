@@ -6,8 +6,8 @@ import numpy as np
 
 st.set_page_config(page_title="Lumi Skeleton Overlay", layout="wide")
 
-# Build marker to verify latest deploy is running
-st.caption("Build: M:SS fix active • streamlit_app.py")
+# Build marker to verify latest deploy is running - FORCE DEPLOY
+st.caption("🚀 NEW BUILD: M:SS fix active • NO MEDIAPIPE • streamlit_app.py")
 
 st.title("🌸 Skeleton Overlay with Reference Timestamp 💚")
 st.write("Upload video + reference CSV → Overlay skeleton & motion text based on CSV timestamps.")
