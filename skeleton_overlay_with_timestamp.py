@@ -18,7 +18,7 @@ except ImportError:
 st.set_page_config(page_title="Lumi Skeleton Overlay", layout="wide")
 
 # Build marker to verify latest deploy is running - FORCE DEPLOY
-st.caption("🚀 NEW BUILD: HH:MM:SS format • FILE UPLOAD FIX • Python 3.13 compatible")
+st.caption("🚀 NEW BUILD: HH:MM:SS format • VIDEO PROCESSING FIX • Python 3.13 compatible")
 
 st.title("🌸 Skeleton Overlay with Reference Timestamp 💚")
 st.write("Upload video + reference CSV → Overlay skeleton & motion text based on CSV timestamps.")
@@ -206,76 +206,173 @@ if uploaded_video and uploaded_csv:
     st.video(video_path)
 
     if st.button("Generate Skeleton Overlay"):
-        cap = cv2.VideoCapture(video_path)
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        
-        # Use H.264 codec for better web compatibility
-        fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
-        output_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
-        out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
+        try:
+            cap = cv2.VideoCapture(video_path)
+            if not cap.isOpened():
+                st.error("❌ Failed to open video file")
+                st.stop()
+                
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            
+            st.info(f"📹 Processing video: {width}x{height} @ {fps:.1f} fps")
+            
+            # Try different codecs in order of preference
+            codecs = ['mp4v', 'XVID', 'MJPG']
+            fourcc = None
+            out = None # Initialize out to None
+            for codec in codecs:
+                try:
+                    fourcc = cv2.VideoWriter_fourcc(*codec)
+                    output_video = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4").name
+                    out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
+                    if out.isOpened():
+                        st.success(f"✅ Using codec: {codec}")
+                        break
+                    else:
+                        out.release()
+                except:
+                    continue
+            
+            if fourcc is None or not out.isOpened():
+                st.error("❌ No compatible video codec found")
+                st.stop()
 
-        margin_x = 20
-        margin_y = 20
-        frame_idx = 0
+            margin_x = 20
+            margin_y = 20
+            frame_idx = 0
+            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            
+            # Progress bar
+            progress_bar = st.progress(0)
+            status_text = st.empty()
 
-        # Initialize MediaPipe Pose if available
-        if MEDIAPIPE_AVAILABLE:
-            with mp_pose.Pose(
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5
-            ) as pose:
+            # Initialize MediaPipe Pose if available
+            if MEDIAPIPE_AVAILABLE:
+                with mp_pose.Pose(
+                    min_detection_confidence=0.5,
+                    min_tracking_confidence=0.5
+                ) as pose:
+                    while True:
+                        ret, frame = cap.read()
+                        if not ret:
+                            break
+
+                        # Update progress
+                        progress = frame_idx / total_frames
+                        progress_bar.progress(progress)
+                        status_text.text(f"Processing frame {frame_idx}/{total_frames}")
+
+                        # Convert BGR to RGB for MediaPipe
+                        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        results = pose.process(rgb_frame)
+
+                        # Draw pose landmarks
+                        if results.pose_landmarks:
+                            # Draw connections with custom colors
+                            for connection in mp_pose.POSE_CONNECTIONS:
+                                start_idx = connection[0]
+                                end_idx = connection[1]
+                                
+                                start_point = results.pose_landmarks.landmark[start_idx]
+                                end_point = results.pose_landmarks.landmark[end_idx]
+                                
+                                # Convert normalized coordinates to pixel coordinates
+                                start_x = int(start_point.x * width)
+                                start_y = int(start_point.y * height)
+                                end_x = int(end_point.x * width)
+                                end_y = int(end_point.y * height)
+                                
+                                # Draw the connection line
+                                cv2.line(frame, (start_x, start_y), (end_x, end_y), line_color_bgr, line_thickness)
+                            
+                            # Draw landmarks as dots
+                            for landmark in results.pose_landmarks.landmark:
+                                x = int(landmark.x * width)
+                                y = int(landmark.y * height)
+                                cv2.circle(frame, (x, y), dot_radius, dot_color_bgr, -1)
+                        else:
+                            # Fallback: draw simple skeleton if no pose detected
+                            h, w, _ = frame.shape
+                            center_x, center_y = w // 2, h // 2
+                            
+                            # Head
+                            cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
+                            
+                            # Body
+                            cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
+                            
+                            # Arms
+                            cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
+                            
+                            # Legs
+                            cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
+                            cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
+
+                        current_sec = int(frame_idx / fps)
+
+                        row = motion_df[motion_df['time_sec'] == current_sec]
+                        if not row.empty:
+                            motions = [col for col in motion_cols if row.iloc[0][col] == 1]
+                            if motions:
+                                text = " + ".join(motions)
+                                text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_font_thickness)
+
+                                if motion_position == "Bottom Right":
+                                    text_x = width - text_size[0] - margin_x
+                                    text_y = height - margin_y
+                                elif motion_position == "Bottom Left":
+                                    text_x = margin_x
+                                    text_y = height - margin_y
+                                elif motion_position == "Top Right":
+                                    text_x = width - text_size[0] - margin_x
+                                    text_y = margin_y + text_size[1]
+                                elif motion_position == "Top Left":
+                                    text_x = margin_x
+                                    text_y = margin_y + text_size[1]
+                                elif motion_position == "Center":
+                                    text_x = (width - text_size[0]) // 2
+                                    text_y = (height + text_size[1]) // 2
+                                else:
+                                    text_x = int((custom_x / 100) * width)
+                                    text_y = int((custom_y / 100) * height)
+
+                                cv2.putText(frame, text, (text_x, text_y),
+                                            cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, (0,0,0), motion_font_thickness+2, cv2.LINE_AA)
+                                cv2.putText(frame, text, (text_x, text_y),
+                                            cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_color_bgr, motion_font_thickness, cv2.LINE_AA)
+
+                        out.write(frame)
+                        frame_idx += 1
+            else:
+                # Fallback for when MediaPipe is not available
                 while True:
                     ret, frame = cap.read()
                     if not ret:
                         break
 
-                    # Convert BGR to RGB for MediaPipe
-                    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    results = pose.process(rgb_frame)
+                    # Update progress
+                    progress = frame_idx / total_frames
+                    progress_bar.progress(progress)
+                    status_text.text(f"Processing frame {frame_idx}/{total_frames}")
 
-                    # Draw pose landmarks
-                    if results.pose_landmarks:
-                        # Draw connections with custom colors
-                        for connection in mp_pose.POSE_CONNECTIONS:
-                            start_idx = connection[0]
-                            end_idx = connection[1]
-                            
-                            start_point = results.pose_landmarks.landmark[start_idx]
-                            end_point = results.pose_landmarks.landmark[end_idx]
-                            
-                            # Convert normalized coordinates to pixel coordinates
-                            start_x = int(start_point.x * width)
-                            start_y = int(start_point.y * height)
-                            end_x = int(end_point.x * width)
-                            end_y = int(end_point.y * height)
-                            
-                            # Draw the connection line
-                            cv2.line(frame, (start_x, start_y), (end_x, end_y), line_color_bgr, line_thickness)
-                        
-                        # Draw landmarks as dots
-                        for landmark in results.pose_landmarks.landmark:
-                            x = int(landmark.x * width)
-                            y = int(landmark.y * height)
-                            cv2.circle(frame, (x, y), dot_radius, dot_color_bgr, -1)
-                    else:
-                        # Fallback: draw simple skeleton if no pose detected
-                        h, w, _ = frame.shape
-                        center_x, center_y = w // 2, h // 2
-                        
-                        # Head
-                        cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
-                        
-                        # Body
-                        cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
-                        
-                        # Arms
-                        cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
-                        
-                        # Legs
-                        cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
-                        cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
+                    # Simple skeleton drawing (fallback)
+                    h, w, _ = frame.shape
+                    center_x, center_y = w // 2, h // 2
+                    
+                    # Head
+                    cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
+                    
+                    # Body
+                    cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
+                    
+                    # Arms
+                    cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
+                    
+                    # Legs
+                    cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
+                    cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
 
                     current_sec = int(frame_idx / fps)
 
@@ -312,86 +409,35 @@ if uploaded_video and uploaded_csv:
 
                     out.write(frame)
                     frame_idx += 1
-        else:
-            # Fallback for when MediaPipe is not available
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
 
-                # Simple skeleton drawing (fallback)
-                h, w, _ = frame.shape
-                center_x, center_y = w // 2, h // 2
-                
-                # Head
-                cv2.circle(frame, (center_x, center_y - 50), 20, dot_color_bgr, -1)
-                
-                # Body
-                cv2.line(frame, (center_x, center_y - 30), (center_x, center_y + 50), line_color_bgr, line_thickness)
-                
-                # Arms
-                cv2.line(frame, (center_x - 40, center_y), (center_x + 40, center_y), line_color_bgr, line_thickness)
-                
-                # Legs
-                cv2.line(frame, (center_x, center_y + 50), (center_x - 30, center_y + 120), line_color_bgr, line_thickness)
-                cv2.line(frame, (center_x, center_y + 50), (center_x + 30, center_y + 120), line_color_bgr, line_thickness)
-
-                current_sec = int(frame_idx / fps)
-
-                row = motion_df[motion_df['time_sec'] == current_sec]
-                if not row.empty:
-                    motions = [col for col in motion_cols if row.iloc[0][col] == 1]
-                    if motions:
-                        text = " + ".join(motions)
-                        text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_font_thickness)
-
-                        if motion_position == "Bottom Right":
-                            text_x = width - text_size[0] - margin_x
-                            text_y = height - margin_y
-                        elif motion_position == "Bottom Left":
-                            text_x = margin_x
-                            text_y = height - margin_y
-                        elif motion_position == "Top Right":
-                            text_x = width - text_size[0] - margin_x
-                            text_y = margin_y + text_size[1]
-                        elif motion_position == "Top Left":
-                            text_x = margin_x
-                            text_y = margin_y + text_size[1]
-                        elif motion_position == "Center":
-                            text_x = (width - text_size[0]) // 2
-                            text_y = (height + text_size[1]) // 2
-                        else:
-                            text_x = int((custom_x / 100) * width)
-                            text_y = int((custom_y / 100) * height)
-
-                        cv2.putText(frame, text, (text_x, text_y),
-                                    cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, (0,0,0), motion_font_thickness+2, cv2.LINE_AA)
-                        cv2.putText(frame, text, (text_x, text_y),
-                                    cv2.FONT_HERSHEY_SIMPLEX, motion_font_scale, motion_color_bgr, motion_font_thickness, cv2.LINE_AA)
-
-                out.write(frame)
-                frame_idx += 1
-
-        cap.release()
-        out.release()
-
-        # Check if video was created successfully
-        if os.path.exists(output_video) and os.path.getsize(output_video) > 0:
-            st.success("✅ Skeleton overlay video generated!")
+            cap.release()
+            out.release()
             
-            # Read the video file for display and download
-            with open(output_video, "rb") as video_file:
-                video_bytes = video_file.read()
-            
-            # Display video
-            st.video(video_bytes)
-            
-            # Download button
-            st.download_button(
-                label="Download Motion Overlay Video",
-                data=video_bytes,
-                file_name="skeleton_overlay.mp4",
-                mime="video/mp4"
-            )
-        else:
-            st.error("❌ Failed to generate video. Please check your input files.") 
+            # Clear progress indicators
+            progress_bar.empty()
+            status_text.empty()
+
+            # Check if video was created successfully
+            if os.path.exists(output_video) and os.path.getsize(output_video) > 0:
+                st.success("✅ Skeleton overlay video generated!")
+                
+                # Read the video file for display and download
+                with open(output_video, "rb") as video_file:
+                    video_bytes = video_file.read()
+                
+                # Display video
+                st.video(video_bytes)
+                
+                # Download button
+                st.download_button(
+                    label="Download Motion Overlay Video",
+                    data=video_bytes,
+                    file_name="skeleton_overlay.mp4",
+                    mime="video/mp4"
+                )
+            else:
+                st.error("❌ Failed to generate video. Please check your input files.")
+                
+        except Exception as e:
+            st.error(f"❌ Error during video processing: {str(e)}")
+            st.error("Please check your video file format and try again.") 
