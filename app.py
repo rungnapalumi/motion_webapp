@@ -1,4 +1,6 @@
 import time
+import base64
+import mimetypes
 from pathlib import Path
 import shutil
 
@@ -6,6 +8,8 @@ import streamlit as st
 
 
 APP_DIR = Path(__file__).resolve().parent
+LOGO_PATH = APP_DIR / "Logo.png"
+TRADEMARK_PATH = APP_DIR / "Trademark.png"
 
 # Default/bundled assets (used if user doesn't upload replacements)
 DEFAULT_DOTS_VIDEO = APP_DIR / "Dots VDO.mp4"
@@ -60,6 +64,15 @@ def _placeholder_process_video(input_path: Path, output_path: Path) -> Path:
 def _read_bytes(path: Path) -> bytes:
     return path.read_bytes()
 
+def _data_uri_for_image(path: Path) -> str:
+    if not path.exists():
+        return ""
+    mime, _ = mimetypes.guess_type(path.name)
+    if not mime:
+        mime = "image/png"
+    b64 = base64.b64encode(path.read_bytes()).decode("utf-8")
+    return f"data:{mime};base64,{b64}"
+
 
 st.set_page_config(page_title="Video Analysis", page_icon="🎬", layout="centered")
 
@@ -70,6 +83,23 @@ if STATE_RESULTS not in st.session_state:
 if STATE_PAYLOADS not in st.session_state:
     st.session_state[STATE_PAYLOADS] = {}
 
+# Top brand header (logo + trademark), full width
+_logo_uri = _data_uri_for_image(LOGO_PATH)
+_tm_uri = _data_uri_for_image(TRADEMARK_PATH)
+st.markdown(
+    f"""
+<div class="pr-topbar pr-fullbleed">
+  <div class="pr-topbar-inner">
+    <div class="pr-brand">
+      {"<img class='pr-logo' src='" + _logo_uri + "' alt='Logo'/>" if _logo_uri else ""}
+      {"<img class='pr-tm' src='" + _tm_uri + "' alt='Trademark'/>" if _tm_uri else ""}
+    </div>
+  </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
 st.title("Video Analysis (วิเคราะห์วิดีโอ)")
 st.write("Upload your video, then click **Analysis**. (อัปโหลดวิดีโอ แล้วกด **Analysis**)")
 
@@ -77,6 +107,65 @@ st.write("Upload your video, then click **Analysis**. (อัปโหลดว�
 st.markdown(
     """
 <style>
+/* -------- People Reader-like theme polish -------- */
+.stApp {
+  background: #f6f3ef;
+}
+
+/* Give the page a nicer top rhythm under the brand header */
+section.main > div.block-container {
+  padding-top: 1.25rem;
+}
+
+/* Full-bleed utility for Streamlit containers */
+.pr-fullbleed {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+}
+
+/* Top bar */
+.pr-topbar {
+  background: #3b342f;
+  padding: 18px 0 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+.pr-topbar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  justify-content: center;
+}
+.pr-brand {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.pr-logo {
+  height: 44px;
+  width: auto;
+}
+.pr-tm {
+  height: 16px;
+  width: auto;
+  margin-top: 2px;
+  opacity: 0.95;
+}
+
+/* Make headings feel closer to the site */
+h1, h2, h3 {
+  letter-spacing: 0.2px;
+}
+
+/* Buttons: rounded + consistent height */
+div.stButton > button {
+  border-radius: 14px !important;
+  min-height: 56px !important;
+}
+
 div[data-testid="stFileUploaderDropzone"] {
   border: 0 !important;
   padding: 0 !important;
@@ -103,6 +192,7 @@ div[data-testid="stDownloadButton"] button {
   line-height: 1.2 !important;
   padding-top: 0.75rem !important;
   padding-bottom: 0.75rem !important;
+  border-radius: 14px !important;
 }
 </style>
 """,

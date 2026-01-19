@@ -1,3 +1,12 @@
+[theme]
+# Match the People Reader site feel (light background + warm dark header + red accents)
+base = "light"
+primaryColor = "#e74c3c"
+backgroundColor = "#f6f3ef"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#1d1c1b"
+font = "serif"
+
 [server]
 # Allow up to 1GB uploads/messages
 maxUploadSize = 1024
