@@ -59,6 +59,11 @@ def _read_bytes(path: Path) -> bytes:
     return path.read_bytes()
 
 
+def _open_binary(path: Path):
+    # Streamlit will read the file-like object immediately for download_button.
+    return open(path, "rb")
+
+
 st.set_page_config(page_title="Video Analysis", page_icon="🎬", layout="centered")
 
 if STATE_STATUS not in st.session_state:
@@ -191,34 +196,42 @@ if st.session_state[STATE_STATUS] == "done":
     st.subheader("Downloads")
     d1, d2 = st.columns(2)
     with d1:
-        st.download_button(
+        with _open_binary(processed_dots) as f_dots:
+            st.download_button(
             "Download: Processed VDO for dots",
-            data=_read_bytes(processed_dots),
-            file_name="processed_dots.mp4",
+            data=f_dots,
+            file_name="Dots VDO.mp4",
             mime="video/mp4",
             use_container_width=True,
-        )
-        st.download_button(
-            "Download: Thai Report",
-            data=_read_bytes(thai_rep),
-            file_name="Thai Report.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+            key="dl_dots_video",
+            )
+        with _open_binary(thai_rep) as f_thai:
+            st.download_button(
+                "Download: Thai Report",
+                data=f_thai,
+                file_name="Thai Report.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="dl_thai_report",
+            )
     with d2:
-        st.download_button(
-            "Download: Processed VDO for skeleton",
-            data=_read_bytes(processed_skeleton),
-            file_name="processed_skeleton.mp4",
-            mime="video/mp4",
-            use_container_width=True,
-        )
-        st.download_button(
-            "Download: English Report",
-            data=_read_bytes(en_rep),
-            file_name="English Report.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+        with _open_binary(processed_skeleton) as f_skel:
+            st.download_button(
+                "Download: Processed VDO for skeleton",
+                data=f_skel,
+                file_name="Skeleton.mp4",
+                mime="video/mp4",
+                use_container_width=True,
+                key="dl_skeleton_video",
+            )
+        with _open_binary(en_rep) as f_en:
+            st.download_button(
+                "Download: English Report",
+                data=f_en,
+                file_name="English Report.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="dl_en_report",
+            )
 
 
