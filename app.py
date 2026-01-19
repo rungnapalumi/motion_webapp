@@ -9,7 +9,7 @@ APP_DIR = Path(__file__).resolve().parent
 
 # Default/bundled assets (used if user doesn't upload replacements)
 DEFAULT_DOTS_VIDEO = APP_DIR / "Dots VDO.mp4"
-DEFAULT_SKELETON_VIDEO = APP_DIR / "Skeleton.mp4"
+DEFAULT_SKELETON_VIDEO = APP_DIR / "Skeleton De.mp4"
 DEFAULT_THAI_REPORT = APP_DIR / "Thai Report.pdf"
 DEFAULT_EN_REPORT = APP_DIR / "English Report.pdf"
 
