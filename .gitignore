@@ -2,9 +2,18 @@
 __pycache__/
 *.pyc
 .streamlit/secrets.toml
+.env
+.env.*
+.python-version
+.idea/
+.vscode/
 
 # Runtime/generated folders
 uploads/
 outputs/
+
+# Virtual environments
+venv/
+.venv/
 
 

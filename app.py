@@ -92,6 +92,7 @@ div[data-testid="stFileUploaderDropzone"] > div > div {
     unsafe_allow_html=True,
 )
 
+video_upload = None
 if st.session_state[STATE_STATUS] == "idle":
     video_upload = st.file_uploader(
         "Video (MP4)",
@@ -130,7 +131,7 @@ if analysis_clicked:
 
     try:
         # Single input video (uploads override bundled default)
-        video_in = _pick_input(video_upload if st.session_state[STATE_STATUS] == "idle" else None, DEFAULT_DOTS_VIDEO, "input.mp4")  # type: ignore[name-defined]
+        video_in = _pick_input(video_upload, DEFAULT_DOTS_VIDEO, "input.mp4")
 
         # Reports are bundled defaults (user doesn't need to upload)
         thai_rep = DEFAULT_THAI_REPORT

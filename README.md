@@ -1,23 +1,24 @@
-## Video Analysis Web App (Streamlit)
+# motion_webapp
 
-This folder contains a small Streamlit web app that:
+This repo contains Streamlit apps for motion/video demos.
 
-- Lets the user upload **Dots** and **Skeleton** videos (and optionally the PDFs)
-- On **Analysis**, shows **"processing video"** for ~30 seconds
+## Demo app: 30-second “Video Analysis” downloader (`app.py`)
+
+This app:
+- Lets the user upload **1 video**
+- On **Analysis**, shows **“processing video”** for ~30 seconds
 - Then provides downloads for:
-  - Processed VDO for dots
-  - Processed VDO for skeleton
-  - Thai Report
-  - English Report
+  - **Processed VDO for dots**
+  - **Processed VDO for skeleton**
+  - **Thai Report**
+  - **English Report**
 
-If the user doesn't upload files, the app uses the bundled defaults already in this folder:
-`Dots VDO.mp4`, `Skeleton.mp4`, `Thai Report.pdf`, `English Report.pdf`.
+If the user doesn’t upload a video, it uses the bundled default video in this folder.
+The reports are downloaded from the bundled PDFs in this folder.
 
-### Run locally
+### Run
 
 ```bash
 python -m pip install -r requirements.txt
 python -m streamlit run app.py --server.port 8502
 ```
-
-
