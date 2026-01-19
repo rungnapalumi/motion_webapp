@@ -91,6 +91,19 @@ div[data-testid="stFileUploaderDropzone"] > div {
 div[data-testid="stFileUploaderDropzone"] > div > div {
   display: none !important;
 }
+
+/* Make all download buttons the same rectangle size (balanced layout) */
+div[data-testid="stDownloadButton"] button {
+  min-height: 74px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+}
 </style>
 """,
     unsafe_allow_html=True,
