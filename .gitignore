@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+
+# Runtime/generated folders
+uploads/
+outputs/
+
+

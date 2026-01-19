@@ -1,0 +1,11 @@
+[server]
+# Allow up to 1GB uploads/messages
+maxUploadSize = 1024
+maxMessageSize = 1024
+
+# This is the intended default for local runs; you can still override via CLI.
+port = 8502
+
+[browser]
+gatherUsageStats = false
+
