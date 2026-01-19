@@ -9,8 +9,8 @@ import streamlit.components.v1 as components
 
 
 APP_DIR = Path(__file__).resolve().parent
-LOGO_PATH = APP_DIR / "Logo.png"
-TRADEMARK_PATH = APP_DIR / "Trademark.png"
+LOGO_FILENAME = "Logo.png"
+TRADEMARK_FILENAME = "Trademark.png"
 
 # Default/bundled assets (used if user doesn't upload replacements)
 DEFAULT_DOTS_VIDEO = APP_DIR / "Dots VDO.mp4"
@@ -65,8 +65,22 @@ def _placeholder_process_video(input_path: Path, output_path: Path) -> Path:
 def _read_bytes(path: Path) -> bytes:
     return path.read_bytes()
 
-def _data_uri_for_image(path: Path) -> str:
-    if not path.exists():
+def _resolve_asset(filename: str) -> Path | None:
+    """
+    Resolve a file in APP_DIR in a case-insensitive way.
+    This avoids macOS (case-insensitive) vs Linux/Render (case-sensitive) surprises.
+    """
+    direct = APP_DIR / filename
+    if direct.exists():
+        return direct
+    target = filename.lower()
+    for p in APP_DIR.iterdir():
+        if p.is_file() and p.name.lower() == target:
+            return p
+    return None
+
+def _data_uri_for_image(path: Path | None) -> str:
+    if path is None or (not path.exists()):
         return ""
     mime, _ = mimetypes.guess_type(path.name)
     if not mime:
@@ -84,9 +98,9 @@ if STATE_RESULTS not in st.session_state:
 if STATE_PAYLOADS not in st.session_state:
     st.session_state[STATE_PAYLOADS] = {}
 
-# Top brand header (logo + trademark), rendered via components.html for reliability on Render/mobile
-_logo_uri = _data_uri_for_image(LOGO_PATH)
-_tm_uri = _data_uri_for_image(TRADEMARK_PATH)
+# Top brand header (logo + trademark)
+_logo_uri = _data_uri_for_image(_resolve_asset(LOGO_FILENAME))
+_tm_uri = _data_uri_for_image(_resolve_asset(TRADEMARK_FILENAME))
 components.html(
     f"""
 <!doctype html>
@@ -144,7 +158,8 @@ components.html(
   </body>
 </html>
 """,
-    height=78,
+    height=86,
+    width=1200,
 )
 
 st.title("Video Analysis (วิเคราะห์วิดีโอ)")
