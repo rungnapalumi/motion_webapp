@@ -159,24 +159,18 @@ if analysis_clicked:
         with st.spinner("processing video"):
             time.sleep(30)
 
-            processed_dots = _placeholder_process_video(
-                dots_source, OUTPUTS_DIR / "processed_dots.mp4"
-            )
-            processed_skeleton = _placeholder_process_video(
-                skeleton_source, OUTPUTS_DIR / "processed_skeleton.mp4"
-            )
-
         # Read once into memory for stable downloads across reruns (prevents media cache KeyError on Render)
         st.session_state[STATE_PAYLOADS] = {
-            "dots_video": _read_bytes(processed_dots),
-            "skeleton_video": _read_bytes(processed_skeleton),
+            # IMPORTANT: Always serve the repo files for dots/skeleton (never the uploaded file)
+            "dots_video": _read_bytes(dots_source),
+            "skeleton_video": _read_bytes(skeleton_source),
             "thai_report": _read_bytes(thai_rep),
             "english_report": _read_bytes(en_rep),
         }
 
         st.session_state[STATE_RESULTS] = {
-            "processed_dots": str(processed_dots),
-            "processed_skeleton": str(processed_skeleton),
+            "dots_source": str(dots_source),
+            "skeleton_source": str(skeleton_source),
             "thai_report": str(thai_rep),
             "english_report": str(en_rep),
         }
