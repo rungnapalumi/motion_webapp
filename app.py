@@ -10,8 +10,8 @@ APP_DIR = Path(__file__).resolve().parent
 # Default/bundled assets (used if user doesn't upload replacements)
 DEFAULT_DOTS_VIDEO = APP_DIR / "Dots VDO.mp4"
 DEFAULT_SKELETON_VIDEO = APP_DIR / "Skeleton De.mp4"
-DEFAULT_THAI_REPORT = APP_DIR / "Thai Report.pdf"
-DEFAULT_EN_REPORT = APP_DIR / "English Report.pdf"
+DEFAULT_THAI_REPORT = APP_DIR / "Thai Report Rev.pdf"
+DEFAULT_EN_REPORT = APP_DIR / "Eng Report Rev.pdf"
 
 UPLOADS_DIR = APP_DIR / "uploads"
 OUTPUTS_DIR = APP_DIR / "outputs"
@@ -203,9 +203,9 @@ if st.session_state[STATE_STATUS] == "done":
             key="dl_dots_video",
         )
         st.download_button(
-            "Download: Thai Report",
+            "Download: Thai Report (รายงานภาษาไทย)",
             data=payloads.get("thai_report", b""),
-            file_name="Thai Report.pdf",
+            file_name="Thai Report Rev.pdf",
             mime="application/pdf",
             use_container_width=True,
             key="dl_thai_report",
@@ -220,9 +220,9 @@ if st.session_state[STATE_STATUS] == "done":
             key="dl_skeleton_video",
         )
         st.download_button(
-            "Download: English Report",
+            "Download: English Report (รายงานภาษาอังกฤษ)",
             data=payloads.get("english_report", b""),
-            file_name="English Report.pdf",
+            file_name="Eng Report Rev.pdf",
             mime="application/pdf",
             use_container_width=True,
             key="dl_en_report",

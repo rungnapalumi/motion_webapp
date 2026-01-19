@@ -10,8 +10,8 @@ This app:
 - Then provides downloads for:
   - **Processed VDO for dots**
   - **Processed VDO for skeleton**
-  - **Thai Report**
-  - **English Report**
+  - **Thai Report Rev**
+  - **English Report Rev**
 
 If the user doesn’t upload a video, it uses the bundled default video in this folder.
 The reports are downloaded from the bundled PDFs in this folder.
