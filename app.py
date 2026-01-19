@@ -130,14 +130,23 @@ if analysis_clicked:
     st.session_state[STATE_RESULTS] = {}
 
     try:
-        # Single input video (uploads override bundled default)
-        video_in = _pick_input(video_upload, DEFAULT_DOTS_VIDEO, "input.mp4")
+        # Require a user upload to start analysis (per UX requirement).
+        if video_upload is None:
+            raise ValueError("Please upload a video before clicking Analysis.")
+
+        # Save the uploaded file (not used for outputs; outputs come from bundled repo files).
+        _pick_input(video_upload, DEFAULT_DOTS_VIDEO, "input.mp4")
 
         # Reports are bundled defaults (user doesn't need to upload)
         thai_rep = DEFAULT_THAI_REPORT
         en_rep = DEFAULT_EN_REPORT
 
-        _require_exists(video_in, "Video")
+        # Output sources are the bundled files in this repo
+        dots_source = DEFAULT_DOTS_VIDEO
+        skeleton_source = DEFAULT_SKELETON_VIDEO
+
+        _require_exists(dots_source, "Dots video")
+        _require_exists(skeleton_source, "Skeleton video")
         _require_exists(thai_rep, "Thai report")
         _require_exists(en_rep, "English report")
 
@@ -146,10 +155,10 @@ if analysis_clicked:
             time.sleep(30)
 
             processed_dots = _placeholder_process_video(
-                video_in, OUTPUTS_DIR / "processed_dots.mp4"
+                dots_source, OUTPUTS_DIR / "processed_dots.mp4"
             )
             processed_skeleton = _placeholder_process_video(
-                video_in, OUTPUTS_DIR / "processed_skeleton.mp4"
+                skeleton_source, OUTPUTS_DIR / "processed_skeleton.mp4"
             )
 
         st.session_state[STATE_RESULTS] = {
