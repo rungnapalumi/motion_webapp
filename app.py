@@ -28,7 +28,8 @@ def _require_exists(path: Path, label: str) -> None:
     if path.exists():
         return
     raise FileNotFoundError(
-        f"Missing {label}: {path.name}. Please upload it, or place it in the app folder."
+        f"Missing {label}: {path.name}. Please upload it, or place it in the app folder. "
+        f"(ไม่พบไฟล์ {label}: {path.name} กรุณาอัปโหลดไฟล์ หรือวางไว้ในโฟลเดอร์ของแอป)"
     )
 
 
@@ -69,8 +70,8 @@ if STATE_RESULTS not in st.session_state:
 if STATE_PAYLOADS not in st.session_state:
     st.session_state[STATE_PAYLOADS] = {}
 
-st.title("Video Analysis")
-st.write("Upload your video, then click **Analysis**.")
+st.title("Video Analysis (วิเคราะห์วิดีโอ)")
+st.write("Upload your video, then click **Analysis**. (อัปโหลดวิดีโอ แล้วกด **Analysis**)")
 
 # Make the file uploader look like a simple "Browse files" button (hide drag/drop text)
 st.markdown(
@@ -98,7 +99,7 @@ div[data-testid="stFileUploaderDropzone"] > div > div {
 video_upload = None
 if st.session_state[STATE_STATUS] == "idle":
     video_upload = st.file_uploader(
-        "Video (MP4)",
+        "Video (MP4) (วิดีโอ MP4)",
         type=["mp4", "mov", "m4v"],
         accept_multiple_files=False,
         key="input_video",
@@ -110,14 +111,14 @@ if st.session_state[STATE_STATUS] == "idle":
 btn_row = st.columns(2)
 with btn_row[0]:
     analysis_clicked = st.button(
-        "Analysis",
+        "Analysis (วิเคราะห์)",
         type="primary",
         use_container_width=True,
         disabled=(st.session_state[STATE_STATUS] == "processing"),
     )
 with btn_row[1]:
     reset_clicked = st.button(
-        "Reset",
+        "Reset (รีเซ็ต)",
         use_container_width=True,
         disabled=(st.session_state[STATE_STATUS] == "processing"),
     )
@@ -137,7 +138,10 @@ if analysis_clicked:
     try:
         # Require a user upload to start analysis (per UX requirement).
         if video_upload is None:
-            raise ValueError("Please upload a video before clicking Analysis.")
+            raise ValueError(
+                "Please upload a video before clicking Analysis. "
+                "(กรุณาอัปโหลดวิดีโอก่อนกด Analysis)"
+            )
 
         # Save the uploaded file (not used for outputs; outputs come from bundled repo files).
         _pick_input(video_upload, DEFAULT_DOTS_VIDEO, "input.mp4")
@@ -155,8 +159,8 @@ if analysis_clicked:
         _require_exists(thai_rep, "Thai report")
         _require_exists(en_rep, "English report")
 
-        st.write("processing video")
-        with st.spinner("processing video"):
+        st.write("processing video (กำลังประมวลผลวิดีโอ)")
+        with st.spinner("processing video (กำลังประมวลผลวิดีโอ)"):
             time.sleep(30)
 
         # Read once into memory for stable downloads across reruns (prevents media cache KeyError on Render)
@@ -189,13 +193,13 @@ if st.session_state[STATE_STATUS] == "error":
 if st.session_state[STATE_STATUS] == "done":
     payloads = st.session_state.get(STATE_PAYLOADS, {})
 
-    st.success("Done. Download your files below.")
+    st.success("Done. Download your files below. (เสร็จสิ้น ดาวน์โหลดไฟล์ด้านล่าง)")
 
-    st.subheader("Downloads")
+    st.subheader("Downloads (ดาวน์โหลด)")
     d1, d2 = st.columns(2)
     with d1:
         st.download_button(
-            "Download: Processed VDO for dots",
+            "Download: Processed VDO for dots (วิดีโอประมวลผลสำหรับจุด)",
             data=payloads.get("dots_video", b""),
             file_name="Dots VDO.mp4",
             mime="video/mp4",
@@ -212,7 +216,7 @@ if st.session_state[STATE_STATUS] == "done":
         )
     with d2:
         st.download_button(
-            "Download: Processed VDO for skeleton",
+            "Download: Processed VDO for skeleton (วิดีโอประมวลผลสำหรับโครงกระดูก)",
             data=payloads.get("skeleton_video", b""),
             file_name="Skeleton.mp4",
             mime="video/mp4",
