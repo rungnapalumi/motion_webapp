@@ -8,7 +8,6 @@ import streamlit as st
 APP_DIR = Path(__file__).resolve().parent
 
 # Default/bundled assets (used if user doesn't upload replacements)
-DEFAULT_DOTS_VIDEO = APP_DIR / "Dots VDO.mp4"
 DEFAULT_SKELETON_VIDEO = APP_DIR / "Skeleton.mp4"
 DEFAULT_THAI_REPORT = APP_DIR / "Thai Report.pdf"
 DEFAULT_EN_REPORT = APP_DIR / "English Report.pdf"
@@ -95,7 +94,7 @@ div[data-testid="stFileUploaderDropzone"] > div > div {
 video_upload = None
 if st.session_state[STATE_STATUS] == "idle":
     video_upload = st.file_uploader(
-        "Video (MP4)",
+        "Skeleton video (MP4)",
         type=["mp4", "mov", "m4v"],
         accept_multiple_files=False,
         key="input_video",
@@ -131,7 +130,7 @@ if analysis_clicked:
 
     try:
         # Single input video (uploads override bundled default)
-        video_in = _pick_input(video_upload, DEFAULT_DOTS_VIDEO, "input.mp4")
+        video_in = _pick_input(video_upload, DEFAULT_SKELETON_VIDEO, "input.mp4")
 
         # Reports are bundled defaults (user doesn't need to upload)
         thai_rep = DEFAULT_THAI_REPORT
@@ -164,9 +163,7 @@ if analysis_clicked:
         st.session_state[STATE_RESULTS] = {"error": str(e)}
 
 if st.session_state[STATE_STATUS] == "idle":
-    st.caption(
-        "Tip: If you don't upload a video, the app will use the bundled default in this folder."
-    )
+    pass
 
 if st.session_state[STATE_STATUS] == "error":
     st.error(st.session_state[STATE_RESULTS].get("error", "Unknown error"))
