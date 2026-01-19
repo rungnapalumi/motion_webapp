@@ -5,6 +5,7 @@ from pathlib import Path
 import shutil
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -83,21 +84,67 @@ if STATE_RESULTS not in st.session_state:
 if STATE_PAYLOADS not in st.session_state:
     st.session_state[STATE_PAYLOADS] = {}
 
-# Top brand header (logo + trademark), full width
+# Top brand header (logo + trademark), rendered via components.html for reliability on Render/mobile
 _logo_uri = _data_uri_for_image(LOGO_PATH)
 _tm_uri = _data_uri_for_image(TRADEMARK_PATH)
-st.markdown(
+components.html(
     f"""
-<div class="pr-topbar pr-fullbleed">
-  <div class="pr-topbar-inner">
-    <div class="pr-brand">
-      {"<img class='pr-logo' src='" + _logo_uri + "' alt='Logo'/>" if _logo_uri else ""}
-      {"<img class='pr-tm' src='" + _tm_uri + "' alt='Trademark'/>" if _tm_uri else ""}
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {{
+        --bar: #3b342f;
+      }}
+      html, body {{
+        margin: 0;
+        padding: 0;
+        background: var(--bar);
+      }}
+      .topbar {{
+        width: 100%;
+        background: var(--bar);
+        padding: 14px 12px;
+        box-sizing: border-box;
+        display: flex;
+        justify-content: center;
+      }}
+      .brand {{
+        width: min(1100px, 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }}
+      img {{
+        display: block;
+        height: 44px;
+        width: auto;
+      }}
+      .tm {{
+        height: 20px;
+        opacity: 0.98;
+      }}
+      @media (max-width: 520px) {{
+        img {{ height: 38px; }}
+        .tm {{ height: 18px; }}
+      }}
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="brand">
+        {f"<img class='logo' src='{_logo_uri}' alt='Logo' />" if _logo_uri else ""}
+        {f"<img class='tm' src='{_tm_uri}' alt='Trademark' />" if _tm_uri else ""}
+      </div>
     </div>
-  </div>
-</div>
+  </body>
+</html>
 """,
-    unsafe_allow_html=True,
+    height=78,
 )
 
 st.title("Video Analysis (วิเคราะห์วิดีโอ)")
@@ -115,44 +162,6 @@ st.markdown(
 /* Give the page a nicer top rhythm under the brand header */
 section.main > div.block-container {
   padding-top: 1.25rem;
-}
-
-/* Full-bleed utility for Streamlit containers */
-.pr-fullbleed {
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-}
-
-/* Top bar */
-.pr-topbar {
-  background: #3b342f;
-  padding: 18px 0 16px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-.pr-topbar-inner {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 1rem;
-  display: flex;
-  justify-content: center;
-}
-.pr-brand {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-.pr-logo {
-  height: 44px;
-  width: auto;
-}
-.pr-tm {
-  height: 16px;
-  width: auto;
-  margin-top: 2px;
-  opacity: 0.95;
 }
 
 /* Make headings feel closer to the site */
