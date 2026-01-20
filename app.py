@@ -8,7 +8,6 @@ import streamlit as st
 
 
 APP_DIR = Path(__file__).resolve().parent
-LOGO_FILENAME = "Logo.png"
 TRADEMARK_FILENAME = "Trademark.png"
 
 # Default/bundled assets (used if user doesn't upload replacements)
@@ -97,17 +96,10 @@ if STATE_RESULTS not in st.session_state:
 if STATE_PAYLOADS not in st.session_state:
     st.session_state[STATE_PAYLOADS] = {}
 
-# Top brand header (logo + trademark) - use Streamlit native images for reliability on Render/mobile
-_logo_path = _resolve_asset(LOGO_FILENAME)
+# Top brand header (trademark only) - use Streamlit native images for reliability on Render/mobile
 _tm_path = _resolve_asset(TRADEMARK_FILENAME)
-if _logo_path or _tm_path:
-    header_cols = st.columns([1, 5])
-    with header_cols[0]:
-        if _logo_path:
-            st.image(str(_logo_path), width=110)
-    with header_cols[1]:
-        if _tm_path:
-            st.image(str(_tm_path), use_container_width=True)
+if _tm_path:
+    st.image(str(_tm_path), use_container_width=True)
     st.divider()
 
 st.title("Video Analysis (วิเคราะห์วิดีโอ)")
