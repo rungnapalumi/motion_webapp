@@ -14,8 +14,8 @@ TRADEMARK_FILENAME = "Trademark.png"
 # Default/bundled assets (used if user doesn't upload replacements)
 DEFAULT_DOTS_VIDEO = APP_DIR / "Dots VDO.mp4"
 DEFAULT_SKELETON_VIDEO = APP_DIR / "Skeleton De.mp4"
-DEFAULT_THAI_REPORT = APP_DIR / "Thai Report Rev.pdf"
-DEFAULT_EN_REPORT = APP_DIR / "Eng Report Rev.pdf"
+DEFAULT_THAI_REPORT = APP_DIR / "Presentation Analysis Thai Report.pdf"
+DEFAULT_EN_REPORT = APP_DIR / "Presentation Analysis English Report.pdf"
 
 UPLOADS_DIR = APP_DIR / "uploads"
 OUTPUTS_DIR = APP_DIR / "outputs"
@@ -284,7 +284,7 @@ if st.session_state[STATE_STATUS] == "done":
         st.download_button(
             "Download: Thai Report (รายงานภาษาไทย)",
             data=payloads.get("thai_report", b""),
-            file_name="Thai Report Rev.pdf",
+            file_name="Presentation Analysis Thai Report.pdf",
             mime="application/pdf",
             use_container_width=True,
             key="dl_thai_report",
@@ -301,7 +301,7 @@ if st.session_state[STATE_STATUS] == "done":
         st.download_button(
             "Download: English Report (รายงานภาษาอังกฤษ)",
             data=payloads.get("english_report", b""),
-            file_name="Eng Report Rev.pdf",
+            file_name="Presentation Analysis English Report.pdf",
             mime="application/pdf",
             use_container_width=True,
             key="dl_en_report",
