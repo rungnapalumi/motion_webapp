@@ -6,8 +6,29 @@ import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-DIST = Path(__file__).resolve().parent / "dist"
 PORT = int(os.environ.get("PORT", "8502"))
+
+
+def resolve_dist() -> Path:
+    env = os.environ.get("MOTION_WEBAPP_DIST", "").strip()
+    candidates = []
+    if env:
+        candidates.append(Path(env))
+    candidates.extend(
+        [
+            Path.cwd() / "dist",
+            Path("/opt/render/project/src/dist"),
+            Path(__file__).resolve().parent / "dist",
+        ]
+    )
+    for path in candidates:
+        if (path / "index.html").is_file():
+            return path
+    checked = ", ".join(str(p) for p in candidates)
+    raise SystemExit(f"Missing React build (index.html). Looked in: {checked}")
+
+
+DIST = None
 
 
 class SpaHandler(SimpleHTTPRequestHandler):
@@ -23,17 +44,13 @@ class SpaHandler(SimpleHTTPRequestHandler):
         if requested.is_file():
             super().do_GET()
             return
-        index = DIST / "index.html"
         self.path = "/index.html"
-        if index.is_file():
-            super().do_GET()
-            return
-        self.send_error(404, "Build missing. Run npm run build.")
+        super().do_GET()
 
 
 def main() -> None:
-    if not DIST.is_dir():
-        raise SystemExit(f"Missing {DIST}. Run npm run build first.")
+    global DIST
+    DIST = resolve_dist()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), SpaHandler)
     print(f"Serving {DIST} on 0.0.0.0:{PORT}", flush=True)
     server.serve_forever()
