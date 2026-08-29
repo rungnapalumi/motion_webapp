@@ -31,9 +31,18 @@ class SpaHandler(SimpleHTTPRequestHandler):
         self.send_error(404, "Build missing. Run npm run build.")
 
 
-if __name__ == "__main__":
+def main() -> None:
     if not DIST.is_dir():
         raise SystemExit(f"Missing {DIST}. Run npm run build first.")
     server = ThreadingHTTPServer(("0.0.0.0", PORT), SpaHandler)
     print(f"Serving {DIST} on 0.0.0.0:{PORT}", flush=True)
     server.serve_forever()
+
+
+def cli() -> None:
+    """Console entry for Render's leftover `streamlit ...` start command."""
+    main()
+
+
+if __name__ == "__main__":
+    main()

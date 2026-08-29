@@ -1,1 +1,5 @@
-# Static React build is served by serve.py (stdlib). No Python web framework needed.
+setuptools>=65
+# Installs a `streamlit` console script that serves the React build.
+# Needed because the existing Render service still starts with:
+#   streamlit run motion_web_app_full_dashboard_png.py --server.port $PORT --server.address 0.0.0.0
+.
