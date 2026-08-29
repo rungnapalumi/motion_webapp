@@ -12,7 +12,11 @@ __pycache__/
 # Local env files
 .env
 .env.*
+!.env.production
 .python-version
+
+# Node
+node_modules/
 
 # IDE/editor
 .idea/

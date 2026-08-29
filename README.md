@@ -1,24 +1,27 @@
 # motion_webapp
 
-This repo contains Streamlit apps for motion/video demos.
+Full copy of the Vercel Presenter Analysis app (`ai-people-reader-v2.vercel.app`).
 
-## Demo app: 30-second “Video Analysis” downloader (`app.py`)
+Same UI and same flow: name + email + video → FastAPI jobs → skeleton video + English PDF, and results emailed.
 
-This app:
-- Lets the user upload **1 video**
-- On **Analysis**, shows **“processing video”** for ~30 seconds
-- Then provides downloads for:
-  - **Processed VDO for dots**
-  - **Processed VDO for skeleton**
-  - **Thai Report Rev**
-  - **English Report Rev**
+API: `https://make-a-wish-74lv.onrender.com` (same as Vercel).
 
-If the user doesn’t upload a video, it uses the bundled default video in this folder.
-The reports are downloaded from the bundled PDFs in this folder.
-
-### Run
+## Local
 
 ```bash
-python -m pip install -r requirements.txt
-python -m streamlit run app.py --server.port 8502
+npm install
+npm run build
+python3 serve.py
 ```
+
+Dev mode:
+
+```bash
+npm install
+npm run dev
+```
+
+## Render
+
+Start command: `python serve.py`  
+Commit the `dist/` folder after `npm run build` so the Python service does not need Node.
