@@ -1,6 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import {
-  API_BASE,
   Artifact,
   JobIds,
   JobStatusResponse,
@@ -430,11 +429,6 @@ export default function App() {
           </button>
         )}
       </div>
-
-      <p className="meta">
-        API: <a href={API_BASE}>{API_BASE}</a>
-        {jobIds.report_job_id ? ` · report ${jobIds.report_job_id}` : null}
-      </p>
     </div>
   );
 }

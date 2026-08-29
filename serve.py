@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 PORT = int(os.environ.get("PORT", "8502"))
 QUOTA = 30
 ACCOUNTS = {f"aipeoplereader{i:02d}": f"partner{i:02d}" for i in range(1, 11)}
+S3_KEY = os.environ.get("MOTION_WEBAPP_S3_KEY", "motion_webapp/quotas.json").strip()
 STORE_LOCK = threading.Lock()
 
 
@@ -51,6 +52,73 @@ def resolve_store() -> Path:
 
 DIST = None
 STORE = None
+S3_CLIENT = None
+S3_BUCKET = ""
+
+
+def s3_config() -> tuple[str, str, str, str]:
+    bucket = (
+        os.environ.get("AWS_BUCKET")
+        or os.environ.get("AWS_S3_BUCKET")
+        or os.environ.get("S3_BUCKET")
+        or ""
+    ).strip()
+    key_id = os.environ.get("AWS_ACCESS_KEY_ID", "").strip()
+    secret = os.environ.get("AWS_SECRET_ACCESS_KEY", "").strip()
+    region = (os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "ap-southeast-1").strip()
+    return bucket, key_id, secret, region
+
+
+def init_s3() -> None:
+    global S3_CLIENT, S3_BUCKET
+    bucket, key_id, secret, region = s3_config()
+    if not (bucket and key_id and secret):
+        S3_CLIENT = None
+        S3_BUCKET = ""
+        print(
+            "Quota store is local-only. Set AWS_BUCKET, AWS_ACCESS_KEY_ID, "
+            "AWS_SECRET_ACCESS_KEY on Render so counts survive deploys.",
+            flush=True,
+        )
+        return
+    try:
+        import boto3
+    except ImportError as exc:
+        raise SystemExit("boto3 is required for durable quota storage") from exc
+    S3_CLIENT = boto3.client(
+        "s3",
+        region_name=region,
+        aws_access_key_id=key_id,
+        aws_secret_access_key=secret,
+    )
+    S3_BUCKET = bucket
+    print(f"Quota S3 s3://{S3_BUCKET}/{S3_KEY}", flush=True)
+
+
+def load_s3_state() -> dict | None:
+    if S3_CLIENT is None:
+        return None
+    try:
+        obj = S3_CLIENT.get_object(Bucket=S3_BUCKET, Key=S3_KEY)
+        data = json.loads(obj["Body"].read().decode("utf-8"))
+        return data if isinstance(data, dict) else None
+    except Exception as exc:
+        code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+        if code in {"NoSuchKey", "404", "NotFound"}:
+            return None
+        print(f"Quota S3 read failed: {exc}", flush=True)
+        return None
+
+
+def save_s3_state(data: dict) -> None:
+    if S3_CLIENT is None:
+        return
+    S3_CLIENT.put_object(
+        Bucket=S3_BUCKET,
+        Key=S3_KEY,
+        Body=json.dumps(data, indent=2).encode("utf-8"),
+        ContentType="application/json",
+    )
 
 
 def default_state() -> dict:
@@ -62,16 +130,10 @@ def default_state() -> dict:
     }
 
 
-def load_state() -> dict:
-    assert STORE is not None
-    if not STORE.is_file():
-        return default_state()
-    try:
-        data = json.loads(STORE.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return default_state()
-    users = data.setdefault("users", {})
-    data.setdefault("sessions", {})
+def normalize_state(data: dict | None) -> dict:
+    state = default_state() if not isinstance(data, dict) else data
+    users = state.setdefault("users", {})
+    state.setdefault("sessions", {})
     for name, password in ACCOUNTS.items():
         current = users.get(name)
         if not isinstance(current, dict):
@@ -81,15 +143,30 @@ def load_state() -> dict:
         if not isinstance(current.get("remaining"), int):
             current["remaining"] = QUOTA
         current["remaining"] = max(0, min(QUOTA, current["remaining"]))
-    return data
+    return state
+
+
+def load_state() -> dict:
+    assert STORE is not None
+    remote = load_s3_state()
+    if remote is not None:
+        return normalize_state(remote)
+    if STORE.is_file():
+        try:
+            return normalize_state(json.loads(STORE.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            pass
+    return default_state()
 
 
 def save_state(data: dict) -> None:
     assert STORE is not None
     STORE.parent.mkdir(parents=True, exist_ok=True)
     tmp = STORE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    payload = json.dumps(data, indent=2)
+    tmp.write_text(payload, encoding="utf-8")
     tmp.replace(STORE)
+    save_s3_state(data)
 
 
 def public_user(username: str, remaining: int) -> dict:
@@ -243,11 +320,12 @@ def main() -> None:
     global DIST, STORE
     DIST = resolve_dist()
     STORE = resolve_store()
+    init_s3()
     with STORE_LOCK:
         save_state(load_state())
     server = ThreadingHTTPServer(("0.0.0.0", PORT), SpaHandler)
     print(f"Serving {DIST} on 0.0.0.0:{PORT}", flush=True)
-    print(f"Quota store {STORE}", flush=True)
+    print(f"Quota local cache {STORE}", flush=True)
     server.serve_forever()
 
 

@@ -7,3 +7,13 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: AWS_REGION
+        value: ap-southeast-1
+      - key: AWS_BUCKET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: MOTION_WEBAPP_S3_KEY
+        value: motion_webapp/quotas.json
