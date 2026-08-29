@@ -25,6 +25,7 @@ node_modules/
 # Runtime/generated folders
 uploads/
 outputs/
+data/
 
 # Virtual environments
 venv/

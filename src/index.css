@@ -202,8 +202,75 @@ label:first-of-type {
   margin-top: 0;
 }
 
+.login h2 {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.login-session {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.login-user {
+  margin: 0;
+  color: var(--dim);
+}
+
+.login-user strong {
+  color: var(--text);
+}
+
+.quota {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: rgba(45, 226, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(45, 226, 255, 0.2) inset;
+}
+
+.quota.empty {
+  background: rgba(255, 77, 109, 0.1);
+  box-shadow: 0 0 0 1px rgba(255, 77, 109, 0.35) inset;
+}
+
+.quota-label {
+  color: var(--dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quota-count {
+  font-size: 1.35rem;
+  color: var(--cyan);
+}
+
+.quota.empty .quota-count {
+  color: #ffc2cd;
+}
+
+.login-note {
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.88rem;
+}
+
 input[type="text"],
 input[type="email"],
+input[type="password"],
 .file-box {
   width: 100%;
   padding: 0.75rem 0.85rem;
@@ -220,7 +287,8 @@ input[type="email"],
 }
 
 input[type="text"]:focus,
-input[type="email"]:focus {
+input[type="email"]:focus,
+input[type="password"]:focus {
   border-color: rgba(45, 226, 255, 0.55);
   box-shadow:
     0 0 0 3px rgba(45, 226, 255, 0.12),

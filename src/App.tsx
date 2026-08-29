@@ -10,6 +10,7 @@ import {
   loadLastJob,
   saveLastJob,
 } from "./api";
+import { AuthUser, consumeUpload, fetchSession, login, logout } from "./auth";
 
 type Phase = "idle" | "uploading" | "processing" | "done" | "error";
 
@@ -52,6 +53,12 @@ export default function App() {
   const [jobIds, setJobIds] = useState<JobIds>({});
   const [pct, setPct] = useState(0);
   const [results, setResults] = useState<JobStatusResponse["results"] | null>(null);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [auth, setAuth] = useState<AuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState("");
   const pollRef = useRef<number | null>(null);
   const inFlightRef = useRef(false);
   const groupIdRef = useRef(groupId);
@@ -112,6 +119,14 @@ export default function App() {
   };
 
   useEffect(() => {
+    void fetchSession()
+      .then((user) => setAuth(user))
+      .catch(() => setAuth(null))
+      .finally(() => setAuthReady(true));
+  }, []);
+
+  useEffect(() => {
+    if (!authReady || !auth) return;
     const last = loadLastJob();
     if (!last?.group_id) return;
     setGroupId(last.group_id);
@@ -125,7 +140,7 @@ export default function App() {
     setMessage("Resuming last job…");
     startPolling(last.group_id, ids);
     return () => stopPoll();
-  }, []);
+  }, [authReady, auth?.username]);
 
   useEffect(() => {
     const onResume = () => {
@@ -153,6 +168,16 @@ export default function App() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!auth) {
+      setPhase("error");
+      setMessage("Please log in before starting analysis.");
+      return;
+    }
+    if (auth.remaining <= 0) {
+      setPhase("error");
+      setMessage("No video uploads remaining for this username.");
+      return;
+    }
     if (!video) {
       setPhase("error");
       setMessage("Please choose a video file.");
@@ -177,6 +202,11 @@ export default function App() {
         skeleton_job_id: created.skeleton_job_id,
         report_job_id: created.report_job_id,
       };
+      try {
+        setAuth(await consumeUpload());
+      } catch {
+        /* job is already queued; remaining will refresh on next login */
+      }
       setGroupId(created.group_id);
       setJobIds(ids);
       saveLastJob(created.group_id, ids);
@@ -201,7 +231,32 @@ export default function App() {
     setVideo(null);
   };
 
+  const onLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setAuthBusy(true);
+    setAuthError("");
+    try {
+      const user = await login(username.trim(), password);
+      setAuth(user);
+      setPassword("");
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const onLogout = async () => {
+    await logout();
+    setAuth(null);
+    setPassword("");
+    onClear();
+  };
+
   const busy = phase === "uploading" || phase === "processing";
+  const remaining = auth?.remaining ?? 0;
+  const noQuota = Boolean(auth && remaining <= 0);
+  const formLocked = busy || !auth || noQuota;
   const links = readyLinks(results);
   const statusClass =
     phase === "done" ? "ok" : phase === "error" ? "err" : "";
@@ -247,6 +302,60 @@ export default function App() {
         </ul>
       </section>
 
+      <section className="panel login" aria-labelledby="partner-login-title">
+        <h2 id="partner-login-title">Partner Login</h2>
+        {auth ? (
+          <div className="login-session">
+            <p className="login-user">
+              Signed in as <strong>{auth.username}</strong>
+            </p>
+            <div className={`quota${noQuota ? " empty" : ""}`}>
+              <span className="quota-label">Videos remaining</span>
+              <strong className="quota-count">
+                {remaining} / {auth.quota}
+              </strong>
+            </div>
+            {noQuota ? (
+              <p className="login-note">This username has used all 30 uploads.</p>
+            ) : (
+              <p className="login-note">Each analysis uses 1 of the 30 uploads for this username.</p>
+            )}
+            <button className="ghost" type="button" onClick={() => void onLogout()} disabled={busy}>
+              Log out
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={onLogin}>
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              type="text"
+              autoComplete="username"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="aipeoplereader01"
+              disabled={authBusy || !authReady}
+            />
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              disabled={authBusy || !authReady}
+            />
+            <button className="primary" type="submit" disabled={authBusy || !authReady}>
+              {authBusy ? "Signing in…" : "Log in"}
+            </button>
+            {authError ? <div className="status err">{authError}</div> : null}
+          </form>
+        )}
+      </section>
+
       <div className="panel card">
         <form onSubmit={onSubmit}>
           <label htmlFor="name">Name</label>
@@ -257,7 +366,7 @@ export default function App() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
-            disabled={busy}
+            disabled={formLocked}
           />
 
           <label htmlFor="email">Email (results will be sent here)</label>
@@ -268,7 +377,7 @@ export default function App() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            disabled={busy}
+            disabled={formLocked}
           />
 
           <label htmlFor="video">Video (mp4/mov, max 100 MB)</label>
@@ -278,18 +387,22 @@ export default function App() {
               type="file"
               accept="video/*,.mp4,.mov,.m4v"
               required={!groupId}
-              disabled={busy}
+              disabled={formLocked}
               onChange={(e) => setVideo(e.target.files?.[0] ?? null)}
             />
             {video ? <span className="file-name">{video.name}</span> : null}
           </label>
 
-          <button className="primary" type="submit" disabled={busy}>
-            {phase === "uploading"
-              ? "Uploading…"
-              : phase === "processing"
-                ? "Processing…"
-                : "Start analysis"}
+          <button className="primary" type="submit" disabled={formLocked}>
+            {!auth
+              ? "Log in to start analysis"
+              : noQuota
+                ? "No uploads remaining"
+                : phase === "uploading"
+                  ? "Uploading…"
+                  : phase === "processing"
+                    ? "Processing…"
+                    : "Start analysis"}
           </button>
         </form>
 
