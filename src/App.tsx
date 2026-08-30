@@ -16,6 +16,7 @@ type Phase = "idle" | "uploading" | "processing" | "done" | "error";
 const RESULT_LABELS: { key: keyof JobStatusResponse["results"]; label: string }[] = [
   { key: "skeleton_video", label: "Skeleton video" },
   { key: "report_en_pdf", label: "English PDF" },
+  { key: "report_th_pdf", label: "Thai PDF" },
 ];
 
 function isTerminalStatus(data: JobStatusResponse): boolean {
@@ -192,6 +193,7 @@ export default function App() {
     fd.append("name", name.trim());
     fd.append("email", email.trim());
     fd.append("gender", "auto");
+    fd.append("languages", "en,th");
     fd.append("video", video);
 
     try {
