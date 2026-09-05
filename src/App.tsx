@@ -303,6 +303,24 @@ export default function App() {
         </ul>
       </section>
 
+      <section className="panel guidelines" aria-labelledby="presentation-objectives-title">
+        <h2 id="presentation-objectives-title">Presentation Objectives</h2>
+        <ol>
+          <li>
+            If you want to see how you present and how others experience you, use a speech you
+            already have.
+          </li>
+          <li>
+            If you want to rehearse and see how engaging you are, try a presentation that is about
+            sharing information, introducing a new concept or getting a point across to your team.
+          </li>
+          <li>
+            If you want to see how confident and authoritative you come across, try use a speech
+            where you need to convince or give instructions with firmness.
+          </li>
+        </ol>
+      </section>
+
       <section className="panel login" aria-labelledby="partner-login-title">
         <h2 id="partner-login-title">Partner Login</h2>
         {auth ? (
