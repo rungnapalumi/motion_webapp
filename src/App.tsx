@@ -399,7 +399,7 @@ export default function App() {
             disabled={formLocked}
           />
 
-          <label htmlFor="video">Video (mp4/mov, max 100 MB)</label>
+          <label htmlFor="video">Video (mp4/mov, max 200 MB)</label>
           <label className="file-box" htmlFor="video">
             <input
               id="video"
