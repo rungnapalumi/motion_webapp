@@ -4,7 +4,7 @@ import {
   JobIds,
   JobStatusResponse,
   clearLastJob,
-  createJob,
+  createJobViaS3,
   getJobStatus,
   loadLastJob,
   saveLastJob,
@@ -187,17 +187,21 @@ export default function App() {
     setResults(null);
     setPct(0);
     setPhase("uploading");
-    setMessage("Uploading and queuing jobs…");
-
-    const fd = new FormData();
-    fd.append("name", name.trim());
-    fd.append("email", email.trim());
-    fd.append("gender", "auto");
-    fd.append("languages", "en,th");
-    fd.append("video", video);
+    setMessage("Preparing direct upload…");
 
     try {
-      const created = await createJob(fd);
+      const created = await createJobViaS3({
+        video,
+        name: name.trim(),
+        email: email.trim(),
+        languages: "en,th",
+        gender: "auto",
+        onPhase: (phase) => {
+          if (phase === "presign") setMessage("Preparing direct upload…");
+          else if (phase === "uploading") setMessage("Uploading video to storage…");
+          else if (phase === "enqueueing") setMessage("Queuing analysis jobs…");
+        },
+      });
       const ids: JobIds = {
         dots_job_id: created.dots_job_id,
         skeleton_job_id: created.skeleton_job_id,
