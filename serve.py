@@ -11,10 +11,18 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 PORT = int(os.environ.get("PORT", "8502"))
-QUOTA = 30
+DEFAULT_QUOTA = 30
+# Per-username overrides; everyone else keeps DEFAULT_QUOTA.
+ACCOUNT_QUOTAS = {
+    "aipeoplereader10": 100,
+}
 ACCOUNTS = {f"aipeoplereader{i:02d}": f"partner{i:02d}" for i in range(1, 11)}
 S3_KEY = os.environ.get("MOTION_WEBAPP_S3_KEY", "motion_webapp/quotas.json").strip()
 STORE_LOCK = threading.Lock()
+
+
+def account_quota(username: str) -> int:
+    return int(ACCOUNT_QUOTAS.get(username, DEFAULT_QUOTA))
 
 
 def resolve_dist() -> Path:
@@ -124,7 +132,12 @@ def save_s3_state(data: dict) -> None:
 def default_state() -> dict:
     return {
         "users": {
-            name: {"password": password, "remaining": QUOTA} for name, password in ACCOUNTS.items()
+            name: {
+                "password": password,
+                "remaining": account_quota(name),
+                "quota": account_quota(name),
+            }
+            for name, password in ACCOUNTS.items()
         },
         "sessions": {},
     }
@@ -135,14 +148,25 @@ def normalize_state(data: dict | None) -> dict:
     users = state.setdefault("users", {})
     state.setdefault("sessions", {})
     for name, password in ACCOUNTS.items():
+        quota = account_quota(name)
         current = users.get(name)
         if not isinstance(current, dict):
-            users[name] = {"password": password, "remaining": QUOTA}
+            users[name] = {"password": password, "remaining": quota, "quota": quota}
             continue
         current["password"] = password
         if not isinstance(current.get("remaining"), int):
-            current["remaining"] = QUOTA
-        current["remaining"] = max(0, min(QUOTA, current["remaining"]))
+            current["remaining"] = quota
+        else:
+            prev_quota = current.get("quota")
+            if not isinstance(prev_quota, int) or prev_quota <= 0:
+                # Historical stores had no per-user quota field (always 30).
+                prev_quota = DEFAULT_QUOTA
+            if prev_quota != quota:
+                used = max(0, int(prev_quota) - int(current["remaining"]))
+                current["remaining"] = max(0, quota - used)
+            else:
+                current["remaining"] = max(0, min(quota, int(current["remaining"])))
+        current["quota"] = quota
     return state
 
 
@@ -174,7 +198,7 @@ def public_user(username: str, remaining: int) -> dict:
         "ok": True,
         "username": username,
         "remaining": remaining,
-        "quota": QUOTA,
+        "quota": account_quota(username),
     }
 
 

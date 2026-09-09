@@ -339,9 +339,11 @@ export default function App() {
               </strong>
             </div>
             {noQuota ? (
-              <p className="login-note">This username has used all 30 uploads.</p>
+              <p className="login-note">This username has used all {auth.quota} uploads.</p>
             ) : (
-              <p className="login-note">Each analysis uses 1 of the 30 uploads for this username.</p>
+              <p className="login-note">
+                Each analysis uses 1 of the {auth.quota} uploads for this username.
+              </p>
             )}
             <button className="ghost" type="button" onClick={() => void onLogout()} disabled={busy}>
               Log out
