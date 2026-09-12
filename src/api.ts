@@ -173,6 +173,7 @@ export async function createJobViaS3(params: CreateJobViaS3Params): Promise<JobC
   enqueueFd.append("gender", gender);
   enqueueFd.append("languages", languages);
   enqueueFd.append("filename", video.name || "input.mp4");
+  enqueueFd.append("include_dots", "true");
 
   const enqueueRes = await fetch(`${API_BASE}/v1/jobs/from-s3`, {
     method: "POST",

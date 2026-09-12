@@ -14,6 +14,7 @@ import { AuthUser, consumeUpload, fetchSession, login, logout } from "./auth";
 type Phase = "idle" | "uploading" | "processing" | "done" | "error";
 
 const RESULT_LABELS: { key: keyof JobStatusResponse["results"]; label: string }[] = [
+  { key: "dots_video", label: "Dots video" },
   { key: "skeleton_video", label: "Skeleton video" },
   { key: "report_en_pdf", label: "English PDF" },
   { key: "report_th_pdf", label: "Thai PDF" },
@@ -31,7 +32,7 @@ function isTerminalStatus(data: JobStatusResponse): boolean {
 function statusMessage(data: JobStatusResponse): string {
   if (data.message && isTerminalStatus(data)) return data.message;
   const st = data.status;
-  return `Group: ${data.group_id}\nProgress: ${data.overall_pct}%\nSkeleton: ${st.skeleton}\nReport: ${st.report}`;
+  return `Group: ${data.group_id}\nProgress: ${data.overall_pct}%\nDots: ${st.dots || "-"}\nSkeleton: ${st.skeleton}\nReport: ${st.report}`;
 }
 
 function readyLinks(results: JobStatusResponse["results"] | null) {
@@ -279,8 +280,8 @@ export default function App() {
         <div className="brand-line" aria-hidden="true" />
         <h1 className="sr-only">AI Presenter Analysis</h1>
         <p className="sub">
-          Your analyzed video and report in PDF format will be ready for download in 1-2 minutes.
-          Both will also be sent to the email provided.
+          Your dots video, skeleton video, and PDF reports will be ready for download in 1-2 minutes.
+          They will also be sent to the email provided.
         </p>
       </header>
 
