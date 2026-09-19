@@ -103,6 +103,8 @@ export type CreateJobViaS3Params = {
   email: string;
   languages?: string;
   gender?: string;
+  /** When false, enqueue report + skeleton only (no dots job). */
+  includeDots?: boolean;
   onPhase?: (phase: "presign" | "uploading" | "enqueueing", detail?: string) => void;
 };
 
@@ -149,7 +151,15 @@ export async function createJob(form: FormData): Promise<JobCreateResponse> {
  * Avoids sending large videos through the Render API host.
  */
 export async function createJobViaS3(params: CreateJobViaS3Params): Promise<JobCreateResponse> {
-  const { video, name, email, languages = "en,th", gender = "auto", onPhase } = params;
+  const {
+    video,
+    name,
+    email,
+    languages = "en,th",
+    gender = "auto",
+    includeDots = true,
+    onPhase,
+  } = params;
   const sizeBytes = video.size;
   if (sizeBytes <= 0) throw new Error("Video file is empty.");
 
@@ -205,7 +215,7 @@ export async function createJobViaS3(params: CreateJobViaS3Params): Promise<JobC
   enqueueFd.append("gender", gender);
   enqueueFd.append("languages", languages);
   enqueueFd.append("filename", video.name || "input.mp4");
-  enqueueFd.append("include_dots", "true");
+  enqueueFd.append("include_dots", includeDots ? "true" : "false");
 
   const enqueueRes = await fetch(`${API_BASE}/v1/jobs/from-s3`, {
     method: "POST",

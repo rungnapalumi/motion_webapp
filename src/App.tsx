@@ -17,6 +17,13 @@ import { AuthUser, consumeUpload, fetchSession, login, logout } from "./auth";
 
 type Phase = "idle" | "uploading" | "processing" | "done" | "error";
 
+/** Partner accounts that get report + skeleton only (no dots video). */
+const NO_DOTS_USERNAMES = new Set(["aipeoplereader10"]);
+
+function accountIncludesDots(username: string | undefined | null): boolean {
+  return !NO_DOTS_USERNAMES.has((username || "").trim().toLowerCase());
+}
+
 const RESULT_LABELS: { key: keyof JobStatusResponse["results"]; label: string }[] = [
   { key: "dots_video", label: "Dots video" },
   { key: "skeleton_video", label: "Skeleton video" },
@@ -33,15 +40,25 @@ function isTerminalStatus(data: JobStatusResponse): boolean {
   );
 }
 
-function statusMessage(data: JobStatusResponse): string {
+function statusMessage(data: JobStatusResponse, includeDots: boolean): string {
   if (data.message && isTerminalStatus(data)) return data.message;
   const st = data.status;
-  return `Group: ${data.group_id}\nProgress: ${data.overall_pct}%\nDots: ${st.dots || "-"}\nSkeleton: ${st.skeleton}\nReport: ${st.report}`;
+  const lines = [
+    `Group: ${data.group_id}`,
+    `Progress: ${data.overall_pct}%`,
+  ];
+  if (includeDots) lines.push(`Dots: ${st.dots || "-"}`);
+  lines.push(`Skeleton: ${st.skeleton}`, `Report: ${st.report}`);
+  return lines.join("\n");
 }
 
-function readyLinks(results: JobStatusResponse["results"] | null) {
+function readyLinks(
+  results: JobStatusResponse["results"] | null,
+  includeDots: boolean,
+) {
   if (!results) return [] as { label: string; url: string }[];
   return RESULT_LABELS.flatMap(({ key, label }) => {
+    if (key === "dots_video" && !includeDots) return [];
     const item: Artifact = results[key];
     if (item?.ready && item.url) return [{ label, url: item.url }];
     return [];
@@ -94,9 +111,12 @@ export default function App() {
   const groupIdRef = useRef(groupId);
   const jobIdsRef = useRef(jobIds);
   const phaseRef = useRef(phase);
+  const includeDots = accountIncludesDots(auth?.username);
+  const includeDotsRef = useRef(includeDots);
   groupIdRef.current = groupId;
   jobIdsRef.current = jobIds;
   phaseRef.current = phase;
+  includeDotsRef.current = includeDots;
 
   const stopPoll = () => {
     if (pollRef.current != null) {
@@ -132,23 +152,23 @@ export default function App() {
     }, 10000);
   };
 
-
   const applyStatus = (data: JobStatusResponse) => {
     setPct(data.overall_pct);
     const rejected =
       data.outcome === "rejected" || data.outcome === "failed" || Boolean(data.terminal && !data.complete);
     setResults(rejected ? null : data.results);
+    const msg = statusMessage(data, includeDotsRef.current);
     if (data.complete) {
       setPhase("done");
       stopPoll();
-      setMessage(statusMessage(data));
+      setMessage(msg);
     } else if (isTerminalStatus(data)) {
       setPhase("error");
       stopPoll();
-      setMessage(statusMessage(data));
+      setMessage(msg);
     } else {
       setPhase("processing");
-      setMessage(statusMessage(data));
+      setMessage(msg);
     }
   };
   const applyStatusRef = useRef(applyStatus);
@@ -268,6 +288,7 @@ export default function App() {
         email: email.trim(),
         languages: "en,th",
         gender: "auto",
+        includeDots: accountIncludesDots(auth.username),
         onPhase: (phase) => {
           if (phase === "presign") setMessage("Preparing direct upload…");
           else if (phase === "uploading") setMessage("Uploading video to storage…");
@@ -275,7 +296,7 @@ export default function App() {
         },
       });
       const ids: JobIds = {
-        dots_job_id: created.dots_job_id,
+        dots_job_id: created.dots_job_id || undefined,
         skeleton_job_id: created.skeleton_job_id,
         report_job_id: created.report_job_id,
       };
@@ -334,7 +355,7 @@ export default function App() {
   const remaining = auth?.remaining ?? 0;
   const noQuota = Boolean(auth && remaining <= 0);
   const formLocked = busy || !auth || noQuota;
-  const links = readyLinks(results);
+  const links = readyLinks(results, includeDots);
   const statusClass =
     phase === "done" ? "ok" : phase === "error" ? "err" : "";
 
@@ -351,8 +372,9 @@ export default function App() {
         <div className="brand-line" aria-hidden="true" />
         <h1 className="sr-only">AI Presenter Analysis</h1>
         <p className="sub">
-          Your dots video, skeleton video, and PDF reports will be ready for download in 1-2 minutes.
-          They will also be sent to the email provided.
+          {includeDots
+            ? "Your dots video, skeleton video, and PDF reports will be ready for download in 1-2 minutes. They will also be sent to the email provided."
+            : "Your skeleton video and PDF reports will be ready for download in 1-2 minutes. They will also be sent to the email provided."}
         </p>
       </header>
 
