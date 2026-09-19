@@ -375,7 +375,6 @@ export default function App() {
             Move and use hand gesture naturally. Remember AI People Reader is analyzing whole body
             movement.
           </li>
-          <li>There is no minimum length — short videos can be uploaded and analyzed.</li>
         </ul>
       </section>
 
