@@ -65,6 +65,38 @@ export type JobIds = {
   report_job_id?: string;
 };
 
+export type QueueStage = "processing" | "waiting" | "ready" | "none";
+
+export type QueueEntry = {
+  group_id: string;
+  name: string;
+  created_at?: string;
+  summary: string;
+  summary_th?: string;
+  stages: {
+    report?: QueueStage;
+    skeleton?: QueueStage;
+    dots?: QueueStage;
+  };
+  is_processing?: boolean;
+};
+
+export type QueueNowWorking = {
+  group_id: string;
+  name: string;
+  mode: string;
+  summary: string;
+  summary_th?: string;
+};
+
+export type QueueResponse = {
+  ok: boolean;
+  updated_at?: string;
+  active_groups?: number;
+  now_working: QueueNowWorking[];
+  queue: QueueEntry[];
+};
+
 export type CreateJobViaS3Params = {
   video: File;
   name: string;
@@ -184,6 +216,30 @@ export async function createJobViaS3(params: CreateJobViaS3Params): Promise<JobC
     throw new Error(detailMessage(enqueueData.detail) || `Enqueue failed (HTTP ${enqueueRes.status})`);
   }
   return enqueueData as unknown as JobCreateResponse;
+}
+
+export async function getQueueStatus(): Promise<QueueResponse> {
+  const url = `${API_BASE}/v1/queue?_t=${Date.now()}`;
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
+  const data = await readJson(res);
+  if (!res.ok) {
+    throw new Error(detailMessage(data.detail) || `HTTP ${res.status}`);
+  }
+  return {
+    ok: Boolean(data.ok ?? true),
+    updated_at: typeof data.updated_at === "string" ? data.updated_at : undefined,
+    active_groups: typeof data.active_groups === "number" ? data.active_groups : undefined,
+    now_working: Array.isArray(data.now_working)
+      ? (data.now_working as QueueNowWorking[])
+      : [],
+    queue: Array.isArray(data.queue) ? (data.queue as QueueEntry[]) : [],
+  };
 }
 
 export async function getJobStatus(

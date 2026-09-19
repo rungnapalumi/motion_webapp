@@ -3,9 +3,13 @@ import {
   Artifact,
   JobIds,
   JobStatusResponse,
+  QueueEntry,
+  QueueNowWorking,
+  QueueStage,
   clearLastJob,
   createJobViaS3,
   getJobStatus,
+  getQueueStatus,
   loadLastJob,
   saveLastJob,
 } from "./api";
@@ -44,6 +48,26 @@ function readyLinks(results: JobStatusResponse["results"] | null) {
   });
 }
 
+
+const STAGE_ORDER: { key: keyof QueueEntry["stages"]; label: string }[] = [
+  { key: "report", label: "Report" },
+  { key: "skeleton", label: "Skeleton" },
+  { key: "dots", label: "Dots" },
+];
+
+function stageLabel(stage: QueueStage | undefined): string {
+  switch (stage) {
+    case "processing":
+      return "in progress";
+    case "waiting":
+      return "waiting";
+    case "ready":
+      return "ready";
+    default:
+      return "—";
+  }
+}
+
 export default function App() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,7 +84,12 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [queue, setQueue] = useState<QueueEntry[]>([]);
+  const [nowWorking, setNowWorking] = useState<QueueNowWorking[]>([]);
+  const [queueError, setQueueError] = useState("");
+  const [queueUpdatedAt, setQueueUpdatedAt] = useState("");
   const pollRef = useRef<number | null>(null);
+  const queuePollRef = useRef<number | null>(null);
   const inFlightRef = useRef(false);
   const groupIdRef = useRef(groupId);
   const jobIdsRef = useRef(jobIds);
@@ -75,6 +104,34 @@ export default function App() {
       pollRef.current = null;
     }
   };
+
+  const stopQueuePoll = () => {
+    if (queuePollRef.current != null) {
+      window.clearInterval(queuePollRef.current);
+      queuePollRef.current = null;
+    }
+  };
+
+  const refreshQueue = async () => {
+    try {
+      const data = await getQueueStatus();
+      setQueue(data.queue || []);
+      setNowWorking(data.now_working || []);
+      setQueueUpdatedAt(data.updated_at || "");
+      setQueueError("");
+    } catch (err) {
+      setQueueError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const startQueuePolling = () => {
+    stopQueuePoll();
+    void refreshQueue();
+    queuePollRef.current = window.setInterval(() => {
+      void refreshQueue();
+    }, 10000);
+  };
+
 
   const applyStatus = (data: JobStatusResponse) => {
     setPct(data.overall_pct);
@@ -142,6 +199,20 @@ export default function App() {
     startPolling(last.group_id, ids);
     return () => stopPoll();
   }, [authReady, auth?.username]);
+
+  useEffect(() => {
+    if (!authReady || !auth) {
+      stopQueuePoll();
+      setQueue([]);
+      setNowWorking([]);
+      setQueueError("");
+      setQueueUpdatedAt("");
+      return;
+    }
+    startQueuePolling();
+    return () => stopQueuePoll();
+  }, [authReady, auth?.username]);
+
 
   useEffect(() => {
     const onResume = () => {
@@ -304,7 +375,7 @@ export default function App() {
             Move and use hand gesture naturally. Remember AI People Reader is analyzing whole body
             movement.
           </li>
-          <li>Your video should be at least 90 seconds.</li>
+          <li>There is no minimum length — short videos can be uploaded and analyzed.</li>
         </ul>
       </section>
 
@@ -456,6 +527,72 @@ export default function App() {
           </button>
         )}
       </div>
+
+      <section className="panel queue-board" aria-labelledby="queue-status-title">
+        <h2 id="queue-status-title">Analysis status &amp; queue</h2>
+        <p className="queue-lead">
+          See who the system is working on, and what each person in the queue is waiting for
+          (report ready, waiting for skeleton, waiting for dots).
+        </p>
+        {!auth ? (
+          <p className="queue-empty">Log in to view the live queue.</p>
+        ) : (
+          <>
+            <div className="queue-now">
+              <h3>Now working</h3>
+              {nowWorking.length === 0 ? (
+                <p className="queue-empty">No jobs are processing right now.</p>
+              ) : (
+                <ul>
+                  {nowWorking.map((item) => (
+                    <li key={`${item.group_id}-${item.mode}`}>
+                      <strong>{item.name}</strong>
+                      <span className="queue-summary">{item.summary_th || item.summary}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="queue-list">
+              <h3>Queue ({queue.length})</h3>
+              {queue.length === 0 ? (
+                <p className="queue-empty">Queue is empty.</p>
+              ) : (
+                <ul>
+                  {queue.map((item) => (
+                    <li
+                      key={item.group_id}
+                      className={item.is_processing ? "is-processing" : undefined}
+                    >
+                      <div className="queue-row-head">
+                        <strong>{item.name}</strong>
+                        {item.group_id === groupId ? <span className="queue-you">You</span> : null}
+                      </div>
+                      <p className="queue-summary">{item.summary_th || item.summary}</p>
+                      <div className="queue-stages">
+                        {STAGE_ORDER.map(({ key, label }) => {
+                          const stage = item.stages?.[key];
+                          if (!stage || stage === "none") return null;
+                          return (
+                            <span key={key} className={`queue-chip stage-${stage}`}>
+                              {label}: {stageLabel(stage)}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {queueError ? <p className="queue-error">{queueError}</p> : null}
+            {queueUpdatedAt ? (
+              <p className="queue-meta">Updated {new Date(queueUpdatedAt).toLocaleTimeString()}</p>
+            ) : null}
+          </>
+        )}
+      </section>
+
     </div>
   );
 }

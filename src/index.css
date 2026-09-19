@@ -442,3 +442,124 @@ button.ghost {
 .meta a {
   color: var(--cyan);
 }
+
+
+.queue-board {
+  margin-top: 1.1rem;
+}
+
+.queue-lead {
+  margin: 0.35rem 0 0.9rem;
+  color: var(--dim);
+  font-size: 0.88rem;
+}
+
+.queue-now,
+.queue-list {
+  margin-top: 0.75rem;
+}
+
+.queue-now h3,
+.queue-list h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  color: var(--pink);
+  letter-spacing: 0.02em;
+}
+
+.queue-now ul,
+.queue-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.queue-now li,
+.queue-list li {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.queue-list li.is-processing {
+  border-color: rgba(45, 226, 255, 0.45);
+  box-shadow: 0 0 16px rgba(45, 226, 255, 0.12);
+}
+
+.queue-row-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.queue-you {
+  font-size: 0.72rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pink), var(--cyan));
+  color: #050508;
+  font-weight: 700;
+}
+
+.queue-summary {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--dim);
+  font-size: 0.86rem;
+}
+
+.queue-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.queue-chip {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--dim);
+}
+
+.queue-chip.stage-processing {
+  border-color: rgba(45, 226, 255, 0.55);
+  color: #9cf3ff;
+  background: rgba(45, 226, 255, 0.1);
+}
+
+.queue-chip.stage-waiting {
+  border-color: rgba(255, 43, 214, 0.4);
+  color: #ffb6ef;
+  background: rgba(255, 43, 214, 0.08);
+}
+
+.queue-chip.stage-ready {
+  border-color: rgba(61, 255, 154, 0.45);
+  color: #b8ffd8;
+  background: rgba(61, 255, 154, 0.08);
+}
+
+.queue-empty {
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.86rem;
+}
+
+.queue-error {
+  margin: 0.7rem 0 0;
+  color: #ffc2cd;
+  font-size: 0.82rem;
+}
+
+.queue-meta {
+  margin: 0.55rem 0 0;
+  color: var(--dim);
+  font-size: 0.75rem;
+  text-align: right;
+}
