@@ -43,10 +43,7 @@ function isTerminalStatus(data: JobStatusResponse): boolean {
 function statusMessage(data: JobStatusResponse, includeDots: boolean): string {
   if (data.message && isTerminalStatus(data)) return data.message;
   const st = data.status;
-  const lines = [
-    `Group: ${data.group_id}`,
-    `Progress: ${data.overall_pct}%`,
-  ];
+  const lines = [`Group: ${data.group_id}`];
   if (includeDots) lines.push(`Dots: ${st.dots || "-"}`);
   lines.push(`Skeleton: ${st.skeleton}`, `Report: ${st.report}`);
   return lines.join("\n");
@@ -93,7 +90,6 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [groupId, setGroupId] = useState("");
   const [jobIds, setJobIds] = useState<JobIds>({});
-  const [pct, setPct] = useState(0);
   const [results, setResults] = useState<JobStatusResponse["results"] | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -153,7 +149,6 @@ export default function App() {
   };
 
   const applyStatus = (data: JobStatusResponse) => {
-    setPct(data.overall_pct);
     const rejected =
       data.outcome === "rejected" || data.outcome === "failed" || Boolean(data.terminal && !data.complete);
     setResults(rejected ? null : data.results);
@@ -277,7 +272,6 @@ export default function App() {
     }
     stopPoll();
     setResults(null);
-    setPct(0);
     setPhase("uploading");
     setMessage("Preparing direct upload…");
 
@@ -323,7 +317,6 @@ export default function App() {
     setGroupId("");
     setJobIds({});
     setResults(null);
-    setPct(0);
     setPhase("idle");
     setMessage("");
     setVideo(null);
@@ -523,12 +516,6 @@ export default function App() {
                     : "Start analysis"}
           </button>
         </form>
-
-        {(phase !== "idle" || pct > 0) && (
-          <div className="progress" aria-hidden>
-            <i style={{ width: `${pct}%` }} />
-          </div>
-        )}
 
         {message ? <div className={`status ${statusClass}`}>{message}</div> : null}
 
