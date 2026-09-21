@@ -454,55 +454,19 @@ button.ghost {
   font-size: 0.88rem;
 }
 
-.queue-now,
-.queue-list {
+.queue-mine {
   margin-top: 0.75rem;
-}
-
-.queue-now h3,
-.queue-list h3 {
-  margin: 0 0 0.45rem;
-  font-size: 0.95rem;
-  color: var(--pink);
-  letter-spacing: 0.02em;
-}
-
-.queue-now ul,
-.queue-list ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.queue-now li,
-.queue-list li {
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 0.7rem 0.8rem;
+  padding: 0.85rem 0.9rem;
   background: rgba(255, 255, 255, 0.03);
 }
 
-.queue-list li.is-processing {
-  border-color: rgba(45, 226, 255, 0.45);
-  box-shadow: 0 0 16px rgba(45, 226, 255, 0.12);
-}
-
-.queue-row-head {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.queue-you {
-  font-size: 0.72rem;
-  padding: 0.12rem 0.45rem;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--pink), var(--cyan));
-  color: #050508;
-  font-weight: 700;
+.queue-position {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
 }
 
 .queue-summary {

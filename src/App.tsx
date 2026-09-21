@@ -4,7 +4,6 @@ import {
   JobIds,
   JobStatusResponse,
   QueueEntry,
-  QueueNowWorking,
   QueueStage,
   clearLastJob,
   createJobViaS3,
@@ -98,7 +97,6 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [authError, setAuthError] = useState("");
   const [queue, setQueue] = useState<QueueEntry[]>([]);
-  const [nowWorking, setNowWorking] = useState<QueueNowWorking[]>([]);
   const [queueError, setQueueError] = useState("");
   const [queueUpdatedAt, setQueueUpdatedAt] = useState("");
   const pollRef = useRef<number | null>(null);
@@ -132,7 +130,6 @@ export default function App() {
     try {
       const data = await getQueueStatus();
       setQueue(data.queue || []);
-      setNowWorking(data.now_working || []);
       setQueueUpdatedAt(data.updated_at || "");
       setQueueError("");
     } catch (err) {
@@ -219,7 +216,6 @@ export default function App() {
     if (!authReady || !auth) {
       stopQueuePoll();
       setQueue([]);
-      setNowWorking([]);
       setQueueError("");
       setQueueUpdatedAt("");
       return;
@@ -351,6 +347,11 @@ export default function App() {
   const links = readyLinks(results, includeDots);
   const statusClass =
     phase === "done" ? "ok" : phase === "error" ? "err" : "";
+  const myQueueIndex = groupId
+    ? queue.findIndex((item) => item.group_id === groupId)
+    : -1;
+  const myQueueEntry = myQueueIndex >= 0 ? queue[myQueueIndex] : null;
+  const myQueuePosition = myQueueIndex >= 0 ? myQueueIndex + 1 : null;
 
   return (
     <div className="app">
@@ -537,60 +538,48 @@ export default function App() {
       </div>
 
       <section className="panel queue-board" aria-labelledby="queue-status-title">
-        <h2 id="queue-status-title">Analysis status &amp; queue</h2>
+        <h2 id="queue-status-title">Your analysis status</h2>
         <p className="queue-lead">
-          See who the system is working on, and what each person in the queue is waiting for
-          (report ready, waiting for skeleton, waiting for dots).
+          Shows only your job status and your place in the queue.
         </p>
         {!auth ? (
-          <p className="queue-empty">Log in to view the live queue.</p>
+          <p className="queue-empty">Log in to view your status.</p>
         ) : (
           <>
-            <div className="queue-now">
-              <h3>Now working</h3>
-              {nowWorking.length === 0 ? (
-                <p className="queue-empty">No jobs are processing right now.</p>
+            <div className="queue-mine">
+              {!groupId ? (
+                <p className="queue-empty">Start an analysis to see your status here.</p>
+              ) : myQueueEntry ? (
+                <>
+                  <p className="queue-position">
+                    {myQueuePosition === 1 && myQueueEntry.is_processing
+                      ? "You are being processed now"
+                      : `You are #${myQueuePosition} in the queue`}
+                    {queue.length > 1 ? ` · ${queue.length} in queue` : ""}
+                  </p>
+                  <p className="queue-summary">
+                    {myQueueEntry.summary_th || myQueueEntry.summary}
+                  </p>
+                  <div className="queue-stages">
+                    {STAGE_ORDER.map(({ key, label }) => {
+                      const stage = myQueueEntry.stages?.[key];
+                      if (!stage || stage === "none") return null;
+                      return (
+                        <span key={key} className={`queue-chip stage-${stage}`}>
+                          {label}: {stageLabel(stage)}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : phase === "uploading" || phase === "processing" ? (
+                <p className="queue-empty">Finding your place in the queue…</p>
+              ) : phase === "done" ? (
+                <p className="queue-empty">Your analysis is complete.</p>
+              ) : phase === "error" ? (
+                <p className="queue-empty">Your analysis stopped. Check the status message above.</p>
               ) : (
-                <ul>
-                  {nowWorking.map((item) => (
-                    <li key={`${item.group_id}-${item.mode}`}>
-                      <strong>{item.name}</strong>
-                      <span className="queue-summary">{item.summary_th || item.summary}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="queue-list">
-              <h3>Queue ({queue.length})</h3>
-              {queue.length === 0 ? (
-                <p className="queue-empty">Queue is empty.</p>
-              ) : (
-                <ul>
-                  {queue.map((item) => (
-                    <li
-                      key={item.group_id}
-                      className={item.is_processing ? "is-processing" : undefined}
-                    >
-                      <div className="queue-row-head">
-                        <strong>{item.name}</strong>
-                        {item.group_id === groupId ? <span className="queue-you">You</span> : null}
-                      </div>
-                      <p className="queue-summary">{item.summary_th || item.summary}</p>
-                      <div className="queue-stages">
-                        {STAGE_ORDER.map(({ key, label }) => {
-                          const stage = item.stages?.[key];
-                          if (!stage || stage === "none") return null;
-                          return (
-                            <span key={key} className={`queue-chip stage-${stage}`}>
-                              {label}: {stageLabel(stage)}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <p className="queue-empty">Start an analysis to see your status here.</p>
               )}
             </div>
             {queueError ? <p className="queue-error">{queueError}</p> : null}
