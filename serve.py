@@ -14,6 +14,7 @@ PORT = int(os.environ.get("PORT", "8502"))
 DEFAULT_QUOTA = 30
 # Per-username overrides; everyone else keeps DEFAULT_QUOTA.
 ACCOUNT_QUOTAS = {
+    "aipeoplereader02": 50,
     "aipeoplereader10": 100,
 }
 ACCOUNTS = {f"aipeoplereader{i:02d}": f"partner{i:02d}" for i in range(1, 11)}
