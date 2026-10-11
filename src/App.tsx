@@ -380,7 +380,7 @@ export default function App() {
             are visible from head to toe.
           </li>
           <li>
-            Recommended video size 480 x 854 in MP4 or MOV. Higher resolution may result in delay
+            Recommended video size 480 x 854 in MP4 or MOV. Video should not exceed 200 MB. Higher resolution may result in delay
             in result download.
           </li>
           <li>
