@@ -11,12 +11,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 PORT = int(os.environ.get("PORT", "8502"))
-DEFAULT_QUOTA = 30
+DEFAULT_QUOTA = 200
 # Per-username overrides; everyone else keeps DEFAULT_QUOTA.
-ACCOUNT_QUOTAS = {
-    "aipeoplereader02": 100,
-    "aipeoplereader10": 100,
-}
+ACCOUNT_QUOTAS = {}
 ACCOUNTS = {f"aipeoplereader{i:02d}": f"partner{i:02d}" for i in range(1, 11)}
 S3_KEY = os.environ.get("MOTION_WEBAPP_S3_KEY", "motion_webapp/quotas.json").strip()
 STORE_LOCK = threading.Lock()
