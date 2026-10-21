@@ -527,3 +527,28 @@ button.ghost {
   font-size: 0.75rem;
   text-align: right;
 }
+
+.language-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+}
+
+.lang-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lang-btn:hover {
+  border-color: var(--cyan);
+  background: rgba(45, 226, 255, 0.08);
+  color: var(--cyan);
+}
