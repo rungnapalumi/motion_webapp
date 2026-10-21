@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Compression Test</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0f;
+      color: #f5f7ff;
+      padding: 1rem;
+      line-height: 1.5;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: #2de2ff;
+    }
+    
+    .lang-switch {
+      margin-bottom: 1.5rem;
+    }
+    
+    .lang-btn {
+      background: transparent;
+      border: 1px solid #444;
+      color: #999;
+      padding: 0.4rem 0.8rem;
+      margin-right: 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    
+    .lang-btn.active {
+      background: #2de2ff;
+      color: #0a0a0f;
+      border-color: #2de2ff;
+    }
+    
+    .file-input-wrapper {
+      margin-bottom: 1.5rem;
+    }
+    
+    input[type="file"] {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      background: #1a1a24;
+      border: 2px dashed #444;
+      border-radius: 8px;
+      color: #f5f7ff;
+      cursor: pointer;
+    }
+    
+    .status {
+      background: #1a1a24;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      min-height: 60px;
+    }
+    
+    .status.error {
+      border-color: #ff4d6d;
+      background: rgba(255, 77, 109, 0.1);
+    }
+    
+    .status.success {
+      border-color: #3dff9a;
+      background: rgba(61, 255, 154, 0.1);
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #1a1a24;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 0.5rem 0;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2de2ff, #7b5cff);
+      transition: width 0.3s;
+    }
+    
+    .metrics {
+      display: grid;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+    }
+    
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid #222;
+    }
+    
+    .metric-label {
+      color: #999;
+    }
+    
+    .metric-value {
+      color: #f5f7ff;
+      font-weight: 500;
+    }
+    
+    video {
+      width: 100%;
+      max-height: 400px;
+      background: #000;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+    
+    button {
+      background: #2de2ff;
+      color: #0a0a0f;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    button:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+    }
+    
+    button.secondary {
+      background: #7b5cff;
+    }
+    
+    .ua {
+      font-size: 0.75rem;
+      color: #666;
+      margin-top: 1rem;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="title">Video Compression Test</h1>
+    <div class="lang-switch">
+      <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
+      <button class="lang-btn" onclick="setLanguage('th')">ไทย</button>
+    </div>
+    
+    <div class="file-input-wrapper">
+      <input type="file" id="fileInput" accept="video/*" />
+    </div>
+    
+    <div class="status" id="status"></div>
+    
+    <div id="results" style="display: none;">
+      <video id="outputVideo" controls></video>
+      <div class="metrics" id="metrics"></div>
+      <div>
+        <button id="downloadBtn" onclick="downloadVideo()">Download Compressed Video</button>
+        <button class="secondary" onclick="copyResults()">Copy Results</button>
+      </div>
+    </div>
+    
+    <div class="ua" id="ua"></div>
+  </div>
+
+  <script>
+    const TRANSLATIONS = {
+      en: {
+        title: 'Video Compression Test',
+        compressing: 'Compressing video {percent}%',
+        complete: 'Compression complete!',
+        error: 'Error: {message}',
+        notSupported: 'WebCodecs H.264 encoding is not supported on this device',
+        originalSize: 'Original size',
+        compressedSize: 'Compressed size',
+        compressionRatio: 'Compression ratio',
+        compressionTime: 'Compression time',
+        originalResolution: 'Original resolution',
+        outputResolution: 'Output resolution',
+        duration: 'Duration',
+        fps: 'Frame rate',
+        download: 'Download Compressed Video',
+        copy: 'Copy Results',
+        copied: 'Copied to clipboard!',
+      },
+      th: {
+        title: 'ทดสอบการย่อขนาดวิดีโอ',
+        compressing: 'กำลังย่อขนาดวิดีโอ {percent}%',
+        complete: 'ย่อขนาดเสร็จสิ้น!',
+        error: 'ข้อผิดพลาด: {message}',
+        notSupported: 'อุปกรณ์นี้ไม่รองรับการเข้ารหัส WebCodecs H.264',
+        originalSize: 'ขนาดต้นฉบับ',
+        compressedSize: 'ขนาดหลังย่อ',
+        compressionRatio: 'อัตราการย่อ',
+        compressionTime: 'เวลาย่อขนาด',
+        originalResolution: 'ความละเอียดต้นฉบับ',
+        outputResolution: 'ความละเอียดผลลัพธ์',
+        duration: 'ระยะเวลา',
+        fps: 'เฟรมต่อวินาที',
+        download: 'ดาวน์โหลดวิดีโอที่ย่อขนาดแล้ว',
+        copy: 'คัดลอกผลลัพธ์',
+        copied: 'คัดลอกไปยังคลิปบอร์ดแล้ว!',
+      },
+    };
+
+    let currentLang = 'en';
+    let compressionResults = null;
+    let compressedBlob = null;
+
+    function t(key) {
+      return TRANSLATIONS[currentLang][key] || key;
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase().includes(lang));
+      });
+      document.getElementById('title').textContent = t('title');
+      document.getElementById('downloadBtn').textContent = t('download');
+      updateStatus();
+      if (compressionResults) {
+        displayResults();
+      }
+    }
+
+    function updateStatus(message = '', isError = false, isSuccess = false) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'status' + (isError ? ' error' : isSuccess ? ' success' : '');
+    }
+
+    function formatBytes(bytes) {
+      return (bytes / (1024 * 1024)).toFixed(2);
+    }
+
+    function formatTime(seconds) {
+      return seconds < 60 ? `${seconds.toFixed(1)}s` : `${Math.floor(seconds / 60)}m ${(seconds % 60).toFixed(0)}s`;
+    }
+
+    async function checkWebCodecsSupport() {
+      if (!('VideoEncoder' in window)) {
+        return false;
+      }
+      try {
+        const config = {
+          codec: 'avc1.42001f',
+          width: 640,
+          height: 480,
+          bitrate: 1_500_000,
+          framerate: 30,
+        };
+        const support = await VideoEncoder.isConfigSupported(config);
+        return support.supported;
+      } catch {
+        return false;
+      }
+    }
+
+    async function compressVideo(file) {
+      const supported = await checkWebCodecsSupport();
+      if (!supported) {
+        updateStatus(t('notSupported'), true);
+        return;
+      }
+
+      const startTime = Date.now();
+      let lastProgressUpdate = startTime;
+      
+      updateStatus(t('compressing').replace('{percent}', '0'));
+      
+      try {
+        const { Conversion } = await import('https://esm.sh/mediabunny@1.62.0');
+        
+        const conversion = new Conversion();
+        conversion.setInput(file);
+        
+        const video = document.createElement('video');
+        video.src = URL.createObjectURL(file);
+        await new Promise((resolve) => {
+          video.addEventListener('loadedmetadata', resolve, { once: true });
+        });
+        
+        const originalWidth = video.videoWidth;
+        const originalHeight = video.videoHeight;
+        const originalDuration = video.duration;
+        const originalFps = 30;
+        
+        const longer = Math.max(originalWidth, originalHeight);
+        const scale = longer > 854 ? 854 / longer : 1;
+        const outputWidth = Math.round(originalWidth * scale / 2) * 2;
+        const outputHeight = Math.round(originalHeight * scale / 2) * 2;
+        
+        conversion.setVideoConfig({
+          codec: 'avc',
+          width: outputWidth,
+          height: outputHeight,
+          bitrate: 1_800_000,
+          framerate: Math.min(originalFps, 30),
+        });
+        
+        conversion.setAudioConfig({
+          codec: 'aac',
+          bitrate: 96_000,
+        });
+        
+        conversion.addEventListener('progress', (e) => {
+          const now = Date.now();
+          if (now - lastProgressUpdate > 100) {
+            const percent = Math.round(e.progress * 100);
+            updateStatus(t('compressing').replace('{percent}', String(percent)));
+            lastProgressUpdate = now;
+          }
+        });
+        
+        const outputBlob = await conversion.start();
+        compressedBlob = outputBlob;
+        
+        const compressionTime = (Date.now() - startTime) / 1000;
+        const compressionRatio = ((1 - outputBlob.size / file.size) * 100).toFixed(1);
+        
+        compressionResults = {
+          originalSize: file.size,
+          compressedSize: outputBlob.size,
+          compressionRatio,
+          compressionTime,
+          originalResolution: `${originalWidth}×${originalHeight}`,
+          outputResolution: `${outputWidth}×${outputHeight}`,
+          duration: originalDuration,
+          fps: Math.min(originalFps, 30),
+        };
+        
+        console.log('Compression complete:', {
+          time: `${compressionTime.toFixed(2)}s`,
+          originalSize: `${formatBytes(file.size)} MB`,
+          compressedSize: `${formatBytes(outputBlob.size)} MB`,
+          ratio: `${compressionRatio}%`,
+          originalRes: `${originalWidth}×${originalHeight}`,
+          outputRes: `${outputWidth}×${outputHeight}`,
+        });
+        
+        updateStatus(t('complete'), false, true);
+        displayResults();
+        
+      } catch (error) {
+        console.error('Compression error:', error);
+        updateStatus(t('error').replace('{message}', error.message), true);
+      }
+    }
+
+    function displayResults() {
+      if (!compressionResults || !compressedBlob) return;
+      
+      const results = document.getElementById('results');
+      results.style.display = 'block';
+      
+      const video = document.getElementById('outputVideo');
+      video.src = URL.createObjectURL(compressedBlob);
+      
+      const metrics = document.getElementById('metrics');
+      metrics.innerHTML = `
+        <div class="metric">
+          <span class="metric-label">${t('originalSize')}</span>
+          <span class="metric-value">${formatBytes(compressionResults.originalSize)} MB</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">${t('compressedSize')}</span>
+          <span class="metric-value">${formatBytes(compressionResults.compressedSize)} MB</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">${t('compressionRatio')}</span>
+          <span class="metric-value">${compressionResults.compressionRatio}%</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">${t('compressionTime')}</span>
+          <span class="metric-value">${formatTime(compressionResults.compressionTime)}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">${t('originalResolution')}</span>
+          <span class="metric-value">${compressionResults.originalResolution}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">${t('outputResolution')}</span>
+          <span class="metric-value">${compressionResults.outputResolution}</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">${t('duration')}</span>
+          <span class="metric-value">${compressionResults.duration.toFixed(1)}s</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">${t('fps')}</span>
+          <span class="metric-value">${compressionResults.fps}</span>
+        </div>
+      `;
+    }
+
+    function downloadVideo() {
+      if (!compressedBlob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(compressedBlob);
+      a.download = 'compressed-video.mp4';
+      a.click();
+    }
+
+    function copyResults() {
+      if (!compressionResults) return;
+      const text = `Video Compression: ${formatBytes(compressionResults.originalSize)}MB → ${formatBytes(compressionResults.compressedSize)}MB (${compressionResults.compressionRatio}% reduction, ${formatTime(compressionResults.compressionTime)}), ${compressionResults.originalResolution} → ${compressionResults.outputResolution}, ${navigator.userAgent}`;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const original = btn.textContent;
+        btn.textContent = t('copied');
+        setTimeout(() => btn.textContent = original, 2000);
+      });
+    }
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        compressionResults = null;
+        compressedBlob = null;
+        document.getElementById('results').style.display = 'none';
+        compressVideo(file);
+      }
+    });
+
+    document.getElementById('ua').textContent = `UA: ${navigator.userAgent}`;
+
+    checkWebCodecsSupport().then(supported => {
+      if (!supported) {
+        updateStatus(t('notSupported'), true);
+      }
+    });
+  </script>
+</body>
+</html>
