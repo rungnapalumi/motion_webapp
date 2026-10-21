@@ -295,10 +295,7 @@
       updateStatus(t('compressing').replace('{percent}', '0'));
       
       try {
-        const { Conversion } = await import('https://esm.sh/mediabunny@1.62.0');
-        
-        const conversion = new Conversion();
-        conversion.setInput(file);
+        const MB = await import('https://esm.sh/mediabunny@1.62.0');
         
         const video = document.createElement('video');
         video.src = URL.createObjectURL(file);
@@ -316,29 +313,30 @@
         const outputWidth = Math.round(originalWidth * scale / 2) * 2;
         const outputHeight = Math.round(originalHeight * scale / 2) * 2;
         
-        conversion.setVideoConfig({
-          codec: 'avc',
-          width: outputWidth,
-          height: outputHeight,
-          bitrate: 1_800_000,
-          framerate: Math.min(originalFps, 30),
+        const input = new MB.Input({ source: new MB.BlobSource(file), formats: MB.ALL_FORMATS });
+        const output = new MB.Output({
+          format: new MB.Mp4OutputFormat({ fastStart: 'in-memory' }),
+          target: new MB.BufferTarget(),
         });
-        
-        conversion.setAudioConfig({
-          codec: 'aac',
-          bitrate: 96_000,
+        const conversion = await MB.Conversion.init({
+          input,
+          output,
+          video: { codec: 'avc', width: outputWidth, height: outputHeight, fit: 'contain', bitrate: 1_800_000, frameRate: 30 },
+          audio: { codec: 'aac', bitrate: 96_000 },
         });
-        
-        conversion.addEventListener('progress', (e) => {
+        if (!conversion.isValid) {
+          throw new Error('Cannot convert: ' + JSON.stringify(conversion.discardedTracks.map(t => t.reason)));
+        }
+        conversion.onProgress = (progress) => {
           const now = Date.now();
           if (now - lastProgressUpdate > 100) {
-            const percent = Math.round(e.progress * 100);
-            updateStatus(t('compressing').replace('{percent}', String(percent)));
+            updateStatus(t('compressing').replace('{percent}', String(Math.round(progress * 100))));
             lastProgressUpdate = now;
           }
-        });
+        };
         
-        const outputBlob = await conversion.start();
+        await conversion.execute();
+        const outputBlob = new Blob([output.target.buffer], { type: 'video/mp4' });
         compressedBlob = outputBlob;
         
         const compressionTime = (Date.now() - startTime) / 1000;
