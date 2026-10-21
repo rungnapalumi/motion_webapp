@@ -255,75 +255,147 @@ export async function getQueueStatus(): Promise<QueueResponse> {
 export async function getJobStatus(
   groupId: string,
   jobIds: JobIds = {},
+  timeoutMs = 15000,
 ): Promise<JobStatusResponse> {
-  const q = new URLSearchParams();
-  if (jobIds.report_job_id) q.set("report_job_id", jobIds.report_job_id);
-  if (jobIds.dots_job_id) q.set("dots_job_id", jobIds.dots_job_id);
-  if (jobIds.skeleton_job_id) q.set("skeleton_job_id", jobIds.skeleton_job_id);
-  q.set("_t", String(Date.now()));
-  const url = `${API_BASE}/v1/jobs/${encodeURIComponent(groupId)}?${q.toString()}`;
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-  });
-  const data = await readJson(res);
-  if (res.status === 409) {
-    const msg = detailMessage(data.detail);
-    return {
-      ok: false,
-      group_id: groupId,
-      overall_pct: 0,
-      complete: false,
-      outcome: "rejected",
-      terminal: true,
-      message: msg,
-      status: {
-        dots: "-",
-        skeleton: "-",
-        report: "Rejected — video did not meet recording conditions",
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const q = new URLSearchParams();
+    if (jobIds.report_job_id) q.set("report_job_id", jobIds.report_job_id);
+    if (jobIds.dots_job_id) q.set("dots_job_id", jobIds.dots_job_id);
+    if (jobIds.skeleton_job_id) q.set("skeleton_job_id", jobIds.skeleton_job_id);
+    q.set("_t", String(Date.now()));
+    const url = `${API_BASE}/v1/jobs/${encodeURIComponent(groupId)}?${q.toString()}`;
+    const res = await fetch(url, {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
       },
-      results: {
-        dots_video: { ready: false, s3_key: null, url: null },
-        skeleton_video: { ready: false, s3_key: null, url: null },
-        report_en_pdf: { ready: false, s3_key: null, url: null },
-        report_th_pdf: { ready: false, s3_key: null, url: null },
-      },
-    };
+    });
+    const data = await readJson(res);
+    if (res.status === 409) {
+      const msg = detailMessage(data.detail);
+      return {
+        ok: false,
+        group_id: groupId,
+        overall_pct: 0,
+        complete: false,
+        outcome: "rejected",
+        terminal: true,
+        message: msg,
+        status: {
+          dots: "-",
+          skeleton: "-",
+          report: "Rejected — video did not meet recording conditions",
+        },
+        results: {
+          dots_video: { ready: false, s3_key: null, url: null },
+          skeleton_video: { ready: false, s3_key: null, url: null },
+          report_en_pdf: { ready: false, s3_key: null, url: null },
+          report_th_pdf: { ready: false, s3_key: null, url: null },
+        },
+      };
+    }
+    if (!res.ok) throw new Error(detailMessage(data.detail) || `HTTP ${res.status}`);
+    return data as unknown as JobStatusResponse;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  if (!res.ok) throw new Error(detailMessage(data.detail) || `HTTP ${res.status}`);
-  return data as unknown as JobStatusResponse;
 }
 
 export { API_BASE };
 
 const STORAGE_KEY = "apr_mobile_last_job";
+const TRACKED_JOBS_KEY = "apr_mobile_tracked_jobs";
 
-export function saveLastJob(groupId: string, jobIds: JobIds): void {
+export type TrackedJob = {
+  group_id: string;
+  name: string;
+  email: string;
+  created_at: number;
+  dots_job_id?: string;
+  skeleton_job_id?: string;
+  report_job_id?: string;
+};
+
+export function migrateOldJob(): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ group_id: groupId, ...jobIds }));
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as { group_id?: string } & JobIds;
+    if (parsed.group_id) {
+      const jobs = loadTrackedJobs();
+      if (!jobs.some((j) => j.group_id === parsed.group_id)) {
+        jobs.push({
+          group_id: parsed.group_id,
+          name: "Migrated job",
+          email: "",
+          created_at: Date.now(),
+          dots_job_id: parsed.dots_job_id,
+          skeleton_job_id: parsed.skeleton_job_id,
+          report_job_id: parsed.report_job_id,
+        });
+        saveTrackedJobs(jobs);
+      }
+    }
+    localStorage.removeItem(STORAGE_KEY);
   } catch {
     /* ignore */
   }
 }
 
-export function loadLastJob(): (JobIds & { group_id: string }) | null {
+export function loadTrackedJobs(): TrackedJob[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { group_id?: string } & JobIds;
-    if (!parsed.group_id) return null;
-    return parsed as JobIds & { group_id: string };
+    const raw = localStorage.getItem(TRACKED_JOBS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed as TrackedJob[];
   } catch {
-    return null;
+    return [];
   }
 }
 
-export function clearLastJob(): void {
+export function saveTrackedJobs(jobs: TrackedJob[]): void {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.setItem(TRACKED_JOBS_KEY, JSON.stringify(jobs));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function addTrackedJob(job: TrackedJob): void {
+  const jobs = loadTrackedJobs();
+  const existing = jobs.findIndex((j) => j.group_id === job.group_id);
+  if (existing >= 0) {
+    jobs[existing] = job;
+  } else {
+    jobs.unshift(job);
+  }
+  saveTrackedJobs(jobs);
+}
+
+export function removeTrackedJob(groupId: string): void {
+  const jobs = loadTrackedJobs().filter((j) => j.group_id !== groupId);
+  saveTrackedJobs(jobs);
+}
+
+export function pruneOldFinishedJobs(
+  finishedGroupIds: Set<string>,
+  maxAgeMs = 24 * 60 * 60 * 1000,
+): void {
+  const cutoff = Date.now() - maxAgeMs;
+  const jobs = loadTrackedJobs().filter(
+    (j) => !finishedGroupIds.has(j.group_id) || j.created_at >= cutoff,
+  );
+  saveTrackedJobs(jobs);
+}
+
+export function clearAllTrackedJobs(): void {
+  try {
+    localStorage.removeItem(TRACKED_JOBS_KEY);
   } catch {
     /* ignore */
   }
