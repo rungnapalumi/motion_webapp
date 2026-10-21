@@ -692,6 +692,7 @@ export default function App() {
               <div key={job.group_id} className="job-item">
                 <div className="job-header">
                   <strong>{job.name || "Unnamed"}</strong>
+                  {" · "}
                   <span className="job-meta">
                     {new Date(job.created_at).toLocaleString()}
                   </span>
