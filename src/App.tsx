@@ -81,6 +81,12 @@ const TRANSLATIONS = {
     skeletonVideo: "Skeleton video",
     englishPdf: "English PDF",
     thaiPdf: "Thai PDF",
+    preparingDirectUpload: "Preparing direct upload…",
+    uploadingVideoToStorage: "Uploading video to storage…",
+    queuingAnalysisJobs: "Queuing analysis jobs…",
+    queuedGroupId: "Queued. Group ID: {groupId}\nPolling status…",
+    resumingJob: "Resuming job…",
+    requestTimedOut: "Request timed out",
   },
   th: {
     siteName: "AI People Reader — วิเคราะห์ผู้นำเสนอ",
@@ -95,15 +101,15 @@ const TRANSLATIONS = {
     objectivesSee: "หากคุณต้องการดูว่าคุณนำเสนออย่างไรและผู้อื่นมองคุณอย่างไร ให้ใช้สุนทรพจน์ที่คุณมีอยู่แล้ว",
     objectivesRehear: "หากคุณต้องการซ้อมและดูว่าคุณน่าสนใจแค่ไหน ลองนำเสนอที่เกี่ยวกับการแบ่งปันข้อมูล แนะนำแนวคิดใหม่ หรือสื่อสารประเด็นให้ทีมของคุณ",
     objectivesConfident: "หากคุณต้องการดูว่าคุณแสดงความมั่นใจและเป็นผู้นำอย่างไร ลองใช้สุนทรพจน์ที่คุณต้องโน้มน้าวหรือสั่งการอย่างแน่วแน่",
-    partnerLogin: "เข้าสู่ระบบพาร์ทเนอร์",
+    partnerLogin: "Partner Login (เข้าสู่ระบบพาร์ทเนอร์)",
     signedInAs: "เข้าสู่ระบบในชื่อ",
     videosRemaining: "วิดีโอที่เหลือ",
     noUploadsRemaining: "ชื่อผู้ใช้นี้ใช้การอัปโหลดครบทั้งหมด {quota} ครั้งแล้ว",
     uploadsNote: "การวิเคราะห์แต่ละครั้งใช้ 1 ใน {quota} การอัปโหลดสำหรับชื่อผู้ใช้นี้",
     logOut: "ออกจากระบบ",
-    username: "ชื่อผู้ใช้",
-    password: "รหัสผ่าน",
-    logIn: "เข้าสู่ระบบ",
+    username: "Username (ชื่อผู้ใช้)",
+    password: "Password (รหัสผ่าน)",
+    logIn: "Log in (เข้าสู่ระบบ)",
     signingIn: "กำลังเข้าสู่ระบบ…",
     name: "ชื่อ",
     yourName: "ชื่อของคุณ",
@@ -111,7 +117,7 @@ const TRANSLATIONS = {
     emailPlaceholder: "you@example.com",
     video: "วิดีโอ (mp4/mov, สูงสุด 200 MB)",
     startAnalysis: "เริ่มวิเคราะห์",
-    logInToStart: "เข้าสู่ระบบเพื่อเริ่มวิเคราะห์",
+    logInToStart: "Log in to start analysis (เข้าสู่ระบบเพื่อเริ่มวิเคราะห์)",
     noUploadsRemainingButton: "ไม่มีการอัปโหลดที่เหลือ",
     uploading: "กำลังอัปโหลด…",
     processing: "กำลังประมวลผล…",
@@ -142,6 +148,12 @@ const TRANSLATIONS = {
     skeletonVideo: "วิดีโอโครงร่าง",
     englishPdf: "PDF ภาษาอังกฤษ",
     thaiPdf: "PDF ภาษาไทย",
+    preparingDirectUpload: "กำลังเตรียมอัปโหลดโดยตรง…",
+    uploadingVideoToStorage: "กำลังอัปโหลดวิดีโอไปยังที่เก็บข้อมูล…",
+    queuingAnalysisJobs: "กำลังจัดคิวงานวิเคราะห์…",
+    queuedGroupId: "จัดคิวแล้ว รหัสกลุ่ม: {groupId}\nกำลังตรวจสอบสถานะ…",
+    resumingJob: "กำลังดำเนินการงานต่อ…",
+    requestTimedOut: "หมดเวลาคำขอ",
   },
 };
 
@@ -405,7 +417,7 @@ export default function App() {
           next.set(groupId, {
             ...job,
             phase: "error",
-            message: isAbortError ? "Request timed out" : errorMsg,
+            message: isAbortError ? t.requestTimedOut : errorMsg,
             abortController: null,
             inFlight: false,
             pollInterval: null,
@@ -449,18 +461,18 @@ export default function App() {
     migrateOldJob();
     const tracked = loadTrackedJobs();
     const newJobs = new Map<string, JobState>();
-    for (const t of tracked) {
-      newJobs.set(t.group_id, {
-        group_id: t.group_id,
-        name: t.name,
-        email: t.email,
-        created_at: t.created_at,
+    for (const job of tracked) {
+      newJobs.set(job.group_id, {
+        group_id: job.group_id,
+        name: job.name,
+        email: job.email,
+        created_at: job.created_at,
         phase: "processing",
-        message: "Resuming job…",
+        message: t.resumingJob,
         jobIds: {
-          dots_job_id: t.dots_job_id,
-          skeleton_job_id: t.skeleton_job_id,
-          report_job_id: t.report_job_id,
+          dots_job_id: job.dots_job_id,
+          skeleton_job_id: job.skeleton_job_id,
+          report_job_id: job.report_job_id,
         },
         results: null,
         pollInterval: null,
@@ -550,7 +562,7 @@ export default function App() {
       email: email.trim(),
       created_at: Date.now(),
       phase: "uploading",
-      message: "Preparing direct upload…",
+      message: t.preparingDirectUpload,
       jobIds: {},
       results: null,
       pollInterval: null,
@@ -571,9 +583,9 @@ export default function App() {
         includeDots: accountIncludesDots(auth.username),
         onPhase: (phase) => {
           let msg = "";
-          if (phase === "presign") msg = "Preparing direct upload…";
-          else if (phase === "uploading") msg = "Uploading video to storage…";
-          else if (phase === "enqueueing") msg = "Queuing analysis jobs…";
+          if (phase === "presign") msg = t.preparingDirectUpload;
+          else if (phase === "uploading") msg = t.uploadingVideoToStorage;
+          else if (phase === "enqueueing") msg = t.queuingAnalysisJobs;
           setJobs((prev) => {
             const job = prev.get(tempGroupId);
             if (!job) return prev;
@@ -616,7 +628,7 @@ export default function App() {
           email: email.trim(),
           created_at: Date.now(),
           phase: "processing",
-          message: `Queued. Group ID: ${created.group_id}\nPolling status…`,
+          message: t.queuedGroupId.replace("{groupId}", created.group_id),
           jobIds: ids,
           results: null,
           pollInterval: null,
