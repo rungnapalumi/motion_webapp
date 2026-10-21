@@ -18,6 +18,133 @@ import {
 } from "./api";
 import { AuthUser, consumeUpload, fetchSession, login, logout } from "./auth";
 
+type Language = "en" | "th";
+
+const TRANSLATIONS = {
+  en: {
+    siteName: "AI People Reader — Presenter Analysis",
+    tagline: "Your dots video, skeleton video, and PDF reports will be ready for download in 1-2 minutes. They will also be sent to the email provided.",
+    taglineNoDots: "Your skeleton video and PDF reports will be ready for download in 1-2 minutes. They will also be sent to the email provided.",
+    recordingGuidelines: "Recording Guidelines",
+    guidePortrait: "Record the video in portrait. Stand in front of a plain colored wall and make sure you are visible from head to toe.",
+    guideSize: "Recommended video size 480 x 854 in MP4 or MOV. Video should not exceed 200 MB. Higher resolution may result in delay in result download.",
+    guideClothing: "Avoid wearing white, black, large prints, loose clothing or same color as the wall behind you.",
+    guideMovement: "Move and use hand gesture naturally. Remember AI People Reader is analyzing whole body movement.",
+    presentationObjectives: "Presentation Objectives",
+    objectivesSee: "If you want to see how you present and how others experience you, use a speech you already have.",
+    objectivesRehear: "If you want to rehearse and see how engaging you are, try a presentation that is about sharing information, introducing a new concept or getting a point across to your team.",
+    objectivesConfident: "If you want to see how confident and authoritative you come across, try use a speech where you need to convince or give instructions with firmness.",
+    partnerLogin: "Partner Login",
+    signedInAs: "Signed in as",
+    videosRemaining: "Videos remaining",
+    noUploadsRemaining: "This username has used all {quota} uploads.",
+    uploadsNote: "Each analysis uses 1 of the {quota} uploads for this username.",
+    logOut: "Log out",
+    username: "Username",
+    password: "Password",
+    logIn: "Log in",
+    signingIn: "Signing in…",
+    name: "Name",
+    yourName: "Your name",
+    email: "Email (results will be sent here)",
+    emailPlaceholder: "you@example.com",
+    video: "Video (mp4/mov, max 200 MB)",
+    startAnalysis: "Start analysis",
+    logInToStart: "Log in to start analysis",
+    noUploadsRemainingButton: "No uploads remaining",
+    uploading: "Uploading…",
+    processing: "Processing…",
+    clearAndStartNew: "Clear and start new",
+    clearForm: "Clear form",
+    yourJobs: "Your Jobs",
+    reconnecting: "Reconnecting…",
+    download: "Download",
+    remove: "Remove",
+    yourAnalysisStatus: "Your analysis status",
+    statusLead: "Shows only your job status and your place in the queue.",
+    logInToView: "Log in to view your status.",
+    startAnalysisToSee: "Start an analysis to see your status here.",
+    beingProcessedNow: "Being processed now",
+    youAreInQueue: "You are #{position} in the queue",
+    inQueue: "{count} in queue",
+    starting: "Starting…",
+    analysisComplete: "Analysis is complete.",
+    analysisStopped: "Analysis stopped. Check the status message above.",
+    updated: "Updated",
+    report: "Report",
+    skeleton: "Skeleton",
+    dots: "Dots",
+    inProgress: "in progress",
+    waiting: "waiting",
+    ready: "ready",
+    dotsVideo: "Dots video",
+    skeletonVideo: "Skeleton video",
+    englishPdf: "English PDF",
+    thaiPdf: "Thai PDF",
+  },
+  th: {
+    siteName: "AI People Reader — วิเคราะห์ผู้นำเสนอ",
+    tagline: "วิดีโอจุด วิดีโอโครงร่าง และรายงาน PDF จะพร้อมดาวน์โหลดภายใน 1-2 นาที และจะถูกส่งไปยังอีเมลที่ระบุด้วย",
+    taglineNoDots: "วิดีโอโครงร่างและรายงาน PDF จะพร้อมดาวน์โหลดภายใน 1-2 นาที และจะถูกส่งไปยังอีเมลที่ระบุด้วย",
+    recordingGuidelines: "แนวทางการบันทึก",
+    guidePortrait: "บันทึกวิดีโอในแนวตั้ง ยืนหน้าผนังสีพื้น และให้มองเห็นตัวคุณตั้งแต่หัวจรดเท้า",
+    guideSize: "ขนาดวิดีโอที่แนะนำคือ 480 x 854 ในรูปแบบ MP4 หรือ MOV วิดีโอต้องไม่เกิน 200 MB ความละเอียดสูงอาจทำให้ดาวน์โหลดผลล่าช้า",
+    guideClothing: "หลีกเลี่ยงการสวมเสื้อผ้าสีขาว สีดำ ลายใหญ่ เสื้อผ้าหลวม หรือสีเดียวกับผนังด้านหลังคุณ",
+    guideMovement: "เคลื่อนไหวและใช้ท่าทางมืออย่างเป็นธรรมชาติ จำไว้ว่า AI People Reader กำลังวิเคราะห์การเคลื่อนไหวของร่างกายทั้งหมด",
+    presentationObjectives: "วัตถุประสงค์การนำเสนอ",
+    objectivesSee: "หากคุณต้องการดูว่าคุณนำเสนออย่างไรและผู้อื่นมองคุณอย่างไร ให้ใช้สุนทรพจน์ที่คุณมีอยู่แล้ว",
+    objectivesRehear: "หากคุณต้องการซ้อมและดูว่าคุณน่าสนใจแค่ไหน ลองนำเสนอที่เกี่ยวกับการแบ่งปันข้อมูล แนะนำแนวคิดใหม่ หรือสื่อสารประเด็นให้ทีมของคุณ",
+    objectivesConfident: "หากคุณต้องการดูว่าคุณแสดงความมั่นใจและเป็นผู้นำอย่างไร ลองใช้สุนทรพจน์ที่คุณต้องโน้มน้าวหรือสั่งการอย่างแน่วแน่",
+    partnerLogin: "เข้าสู่ระบบพาร์ทเนอร์",
+    signedInAs: "เข้าสู่ระบบในชื่อ",
+    videosRemaining: "วิดีโอที่เหลือ",
+    noUploadsRemaining: "ชื่อผู้ใช้นี้ใช้การอัปโหลดครบทั้งหมด {quota} ครั้งแล้ว",
+    uploadsNote: "การวิเคราะห์แต่ละครั้งใช้ 1 ใน {quota} การอัปโหลดสำหรับชื่อผู้ใช้นี้",
+    logOut: "ออกจากระบบ",
+    username: "ชื่อผู้ใช้",
+    password: "รหัสผ่าน",
+    logIn: "เข้าสู่ระบบ",
+    signingIn: "กำลังเข้าสู่ระบบ…",
+    name: "ชื่อ",
+    yourName: "ชื่อของคุณ",
+    email: "อีเมล (ผลลัพธ์จะถูกส่งที่นี่)",
+    emailPlaceholder: "you@example.com",
+    video: "วิดีโอ (mp4/mov, สูงสุด 200 MB)",
+    startAnalysis: "เริ่มวิเคราะห์",
+    logInToStart: "เข้าสู่ระบบเพื่อเริ่มวิเคราะห์",
+    noUploadsRemainingButton: "ไม่มีการอัปโหลดที่เหลือ",
+    uploading: "กำลังอัปโหลด…",
+    processing: "กำลังประมวลผล…",
+    clearAndStartNew: "ล้างและเริ่มใหม่",
+    clearForm: "ล้างฟอร์ม",
+    yourJobs: "งานของคุณ",
+    reconnecting: "กำลังเชื่อมต่อใหม่…",
+    download: "ดาวน์โหลด",
+    remove: "ลบ",
+    yourAnalysisStatus: "สถานะการวิเคราะห์ของคุณ",
+    statusLead: "แสดงเฉพาะสถานะงานของคุณและตำแหน่งของคุณในคิว",
+    logInToView: "เข้าสู่ระบบเพื่อดูสถานะของคุณ",
+    startAnalysisToSee: "เริ่มการวิเคราะห์เพื่อดูสถานะที่นี่",
+    beingProcessedNow: "กำลังประมวลผลอยู่ตอนนี้",
+    youAreInQueue: "คุณอยู่ลำดับที่ #{position} ในคิว",
+    inQueue: "{count} ในคิว",
+    starting: "กำลังเริ่ม…",
+    analysisComplete: "การวิเคราะห์เสร็จสมบูรณ์",
+    analysisStopped: "การวิเคราะห์หยุด ตรวจสอบข้อความสถานะด้านบน",
+    updated: "อัปเดต",
+    report: "รายงาน",
+    skeleton: "โครงร่าง",
+    dots: "จุด",
+    inProgress: "กำลังดำเนินการ",
+    waiting: "กำลังรอ",
+    ready: "พร้อม",
+    dotsVideo: "วิดีโอจุด",
+    skeletonVideo: "วิดีโอโครงร่าง",
+    englishPdf: "PDF ภาษาอังกฤษ",
+    thaiPdf: "PDF ภาษาไทย",
+  },
+};
+
 type JobPhase = "uploading" | "processing" | "done" | "error";
 
 type JobState = {
@@ -43,12 +170,14 @@ function accountIncludesDots(username: string | undefined | null): boolean {
   return !NO_DOTS_USERNAMES.has((username || "").trim().toLowerCase());
 }
 
-const RESULT_LABELS: { key: keyof JobStatusResponse["results"]; label: string }[] = [
-  { key: "dots_video", label: "Dots video" },
-  { key: "skeleton_video", label: "Skeleton video" },
-  { key: "report_en_pdf", label: "English PDF" },
-  { key: "report_th_pdf", label: "Thai PDF" },
-];
+function getResultLabels(t: typeof TRANSLATIONS.en): { key: keyof JobStatusResponse["results"]; label: string }[] {
+  return [
+    { key: "dots_video", label: t.dotsVideo },
+    { key: "skeleton_video", label: t.skeletonVideo },
+    { key: "report_en_pdf", label: t.englishPdf },
+    { key: "report_th_pdf", label: t.thaiPdf },
+  ];
+}
 
 function isTerminalStatus(data: JobStatusResponse): boolean {
   return Boolean(
@@ -71,9 +200,11 @@ function statusMessage(data: JobStatusResponse, includeDots: boolean): string {
 function readyLinks(
   results: JobStatusResponse["results"] | null,
   includeDots: boolean,
+  t: typeof TRANSLATIONS.en,
 ) {
   if (!results) return [] as { label: string; url: string }[];
-  return RESULT_LABELS.flatMap(({ key, label }) => {
+  const labels = getResultLabels(t);
+  return labels.flatMap(({ key, label }) => {
     if (key === "dots_video" && !includeDots) return [];
     const item: Artifact = results[key];
     if (item?.ready && item.url) return [{ label, url: item.url }];
@@ -82,26 +213,44 @@ function readyLinks(
 }
 
 
-const STAGE_ORDER: { key: keyof QueueEntry["stages"]; label: string }[] = [
-  { key: "report", label: "Report" },
-  { key: "skeleton", label: "Skeleton" },
-  { key: "dots", label: "Dots" },
-];
+function getStageOrder(t: typeof TRANSLATIONS.en): { key: keyof QueueEntry["stages"]; label: string }[] {
+  return [
+    { key: "report", label: t.report },
+    { key: "skeleton", label: t.skeleton },
+    { key: "dots", label: t.dots },
+  ];
+}
 
-function stageLabel(stage: QueueStage | undefined): string {
+function stageLabel(stage: QueueStage | undefined, t: typeof TRANSLATIONS.en): string {
   switch (stage) {
     case "processing":
-      return "in progress";
+      return t.inProgress;
     case "waiting":
-      return "waiting";
+      return t.waiting;
     case "ready":
-      return "ready";
+      return t.ready;
     default:
       return "—";
   }
 }
 
+function getInitialLanguage(): Language {
+  try {
+    const saved = localStorage.getItem("apr_language");
+    if (saved === "en" || saved === "th") return saved;
+  } catch {}
+  const browserLang = navigator.language.toLowerCase();
+  return browserLang.startsWith("th") ? "th" : "en";
+}
+
+function saveLanguage(lang: Language) {
+  try {
+    localStorage.setItem("apr_language", lang);
+  } catch {}
+}
+
 export default function App() {
+  const [language, setLanguage] = useState<Language>(getInitialLanguage);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [video, setVideo] = useState<File | null>(null);
@@ -118,6 +267,13 @@ export default function App() {
   const [jobs, setJobs] = useState<Map<string, JobState>>(new Map());
   const queuePollRef = useRef<number | null>(null);
   const includeDots = accountIncludesDots(auth?.username);
+  const t = TRANSLATIONS[language];
+  
+  const toggleLanguage = () => {
+    const newLang: Language = language === "en" ? "th" : "en";
+    setLanguage(newLang);
+    saveLanguage(newLang);
+  };
 
   const stopQueuePoll = () => {
     if (queuePollRef.current != null) {
@@ -531,90 +687,77 @@ export default function App() {
 
   return (
     <div className="app">
+      <div className="language-toggle">
+        <button 
+          type="button" 
+          onClick={toggleLanguage}
+          className="lang-btn"
+          aria-label="Switch language"
+        >
+          {language === "en" ? "EN | ไทย" : "EN | ไทย"}
+        </button>
+      </div>
       <header className="hero">
         <img
           className="logo"
           src="/brand-logo.png"
-          alt="AI People Reader — Presenter Analysis"
+          alt={t.siteName}
           width={512}
           height={512}
         />
         <div className="brand-line" aria-hidden="true" />
-        <h1 className="sr-only">AI Presenter Analysis</h1>
+        <h1 className="sr-only">{t.siteName}</h1>
         <p className="sub">
-          {includeDots
-            ? "Your dots video, skeleton video, and PDF reports will be ready for download in 1-2 minutes. They will also be sent to the email provided."
-            : "Your skeleton video and PDF reports will be ready for download in 1-2 minutes. They will also be sent to the email provided."}
+          {includeDots ? t.tagline : t.taglineNoDots}
         </p>
       </header>
 
       <section className="panel guidelines" aria-labelledby="recording-guidelines-title">
-        <h2 id="recording-guidelines-title">Recording Guidelines</h2>
+        <h2 id="recording-guidelines-title">{t.recordingGuidelines}</h2>
         <ul>
-          <li>
-            Record the video in portrait. Stand in front of a plain colored wall and make sure you
-            are visible from head to toe.
-          </li>
-          <li>
-            Recommended video size 480 x 854 in MP4 or MOV. Video should not exceed 200 MB. Higher resolution may result in delay
-            in result download.
-          </li>
-          <li>
-            Avoid wearing white, black, large prints, loose clothing or same color as the wall
-            behind you.
-          </li>
-          <li>
-            Move and use hand gesture naturally. Remember AI People Reader is analyzing whole body
-            movement.
-          </li>
+          <li>{t.guidePortrait}</li>
+          <li>{t.guideSize}</li>
+          <li>{t.guideClothing}</li>
+          <li>{t.guideMovement}</li>
         </ul>
       </section>
 
       <section className="panel guidelines" aria-labelledby="presentation-objectives-title">
-        <h2 id="presentation-objectives-title">Presentation Objectives</h2>
+        <h2 id="presentation-objectives-title">{t.presentationObjectives}</h2>
         <ol>
-          <li>
-            If you want to see how you present and how others experience you, use a speech you
-            already have.
-          </li>
-          <li>
-            If you want to rehearse and see how engaging you are, try a presentation that is about
-            sharing information, introducing a new concept or getting a point across to your team.
-          </li>
-          <li>
-            If you want to see how confident and authoritative you come across, try use a speech
-            where you need to convince or give instructions with firmness.
-          </li>
+          <li>{t.objectivesSee}</li>
+          <li>{t.objectivesRehear}</li>
+          <li>{t.objectivesConfident}</li>
         </ol>
       </section>
 
       <section className="panel login" aria-labelledby="partner-login-title">
-        <h2 id="partner-login-title">Partner Login</h2>
+        <h2 id="partner-login-title">{t.partnerLogin}</h2>
         {auth ? (
           <div className="login-session">
             <p className="login-user">
-              Signed in as <strong>{auth.username}</strong>
+              {t.signedInAs} <strong>{auth.username}</strong>
             </p>
             <div className={`quota${noQuota ? " empty" : ""}`}>
-              <span className="quota-label">Videos remaining</span>
+              <span className="quota-label">{t.videosRemaining}</span>
               <strong className="quota-count">
                 {remaining} / {auth.quota}
               </strong>
             </div>
             {noQuota ? (
-              <p className="login-note">This username has used all {auth.quota} uploads.</p>
+              <p className="login-note">{t.noUploadsRemaining.replace("{quota}", String(auth.quota))}</p>
             ) : (
               <p className="login-note">
-                Each analysis uses 1 of the {auth.quota} uploads for this username.
+                {t.uploadsNote.replace("{quota}", String(auth.quota))}
               </p>
             )}
             <button className="ghost" type="button" onClick={() => void onLogout()} disabled={uploading}>
-              Log out
+              {t.logOut}
             </button>
           </div>
         ) : (
           <form onSubmit={onLogin}>
-            <label htmlFor="username">Username</label>
+            <label htmlFor="username">{t.username}</label>
             <input
               id="username"
               type="text"
@@ -625,7 +768,7 @@ export default function App() {
               placeholder="aipeoplereader01"
               disabled={authBusy || !authReady}
             />
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t.password}</label>
             <input
               id="password"
               type="password"
@@ -633,11 +776,11 @@ export default function App() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder={t.password}
               disabled={authBusy || !authReady}
             />
             <button className="primary" type="submit" disabled={authBusy || !authReady}>
-              {authBusy ? "Signing in…" : "Log in"}
+              {authBusy ? t.signingIn : t.logIn}
             </button>
             {authError ? <div className="status err">{authError}</div> : null}
           </form>
@@ -646,29 +789,29 @@ export default function App() {
 
       <div className="panel card">
         <form onSubmit={onSubmit}>
-          <label htmlFor="name">Name</label>
+          <label htmlFor="name">{t.name}</label>
           <input
             id="name"
             type="text"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
+            placeholder={t.yourName}
             disabled={formLocked}
           />
 
-          <label htmlFor="email">Email (results will be sent here)</label>
+          <label htmlFor="email">{t.email}</label>
           <input
             id="email"
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t.emailPlaceholder}
             disabled={formLocked}
           />
 
-          <label htmlFor="video">Video (mp4/mov, max 200 MB)</label>
+          <label htmlFor="video">{t.video}</label>
           <label className="file-box" htmlFor="video">
             <input
               id="video"
@@ -683,27 +826,27 @@ export default function App() {
 
           <button className="primary" type="submit" disabled={formLocked}>
             {!auth
-              ? "Log in to start analysis"
+              ? t.logInToStart
               : noQuota
-                ? "No uploads remaining"
+                ? t.noUploadsRemainingButton
                 : uploading
-                  ? "Uploading…"
-                  : "Start analysis"}
+                  ? t.uploading
+                  : t.startAnalysis}
           </button>
         </form>
 
         {(name || email || video) && (
           <button className="ghost" type="button" onClick={onClear} disabled={uploading}>
-            Clear form
+            {t.clearForm}
           </button>
         )}
       </div>
 
       {jobsList.length > 0 && (
         <section className="panel" aria-labelledby="jobs-title">
-          <h2 id="jobs-title">Your Jobs</h2>
+          <h2 id="jobs-title">{t.yourJobs}</h2>
           {jobsList.map((job) => {
-            const links = readyLinks(job.results, includeDots);
+            const links = readyLinks(job.results, includeDots, t);
             const statusClass =
               job.phase === "done" ? "ok" : job.phase === "error" ? "err" : "";
             const myQueueEntry = queue.find((item) => item.group_id === job.group_id);
@@ -730,19 +873,19 @@ export default function App() {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        Download {item.label}
+                        {t.download} {item.label}
                       </a>
                     ))}
                   </div>
                 ) : null}
                 {myQueueEntry && (
                   <div className="queue-stages">
-                    {STAGE_ORDER.map(({ key, label }) => {
+                    {getStageOrder(t).map(({ key, label }) => {
                       const stage = myQueueEntry.stages?.[key];
                       if (!stage || stage === "none") return null;
                       return (
                         <span key={key} className={`queue-chip stage-${stage}`}>
-                          {label}: {stageLabel(stage)}
+                          {label}: {stageLabel(stage, t)}
                         </span>
                       );
                     })}
@@ -761,7 +904,7 @@ export default function App() {
                       });
                     }}
                   >
-                    Remove
+                    {t.remove}
                   </button>
                 )}
               </div>
@@ -771,14 +914,14 @@ export default function App() {
       )}
 
       <section className="panel queue-board" aria-labelledby="queue-status-title">
-        <h2 id="queue-status-title">Your analysis status</h2>
+        <h2 id="queue-status-title">{t.yourAnalysisStatus}</h2>
         <p className="queue-lead">
-          Shows only your job status and your place in the queue.
+          {t.statusLead}
         </p>
         {!auth ? (
-          <p className="queue-empty">Log in to view your status.</p>
+          <p className="queue-empty">{t.logInToView}</p>
         ) : jobsList.length === 0 ? (
-          <p className="queue-empty">Start an analysis to see your status here.</p>
+          <p className="queue-empty">{t.startAnalysisToSee}</p>
         ) : (
           <>
             {jobsList.map((job) => {
@@ -811,20 +954,20 @@ export default function App() {
                         <strong>{job.name || "Unnamed"}</strong>
                         {" · "}
                         {myQueueEntry.is_processing
-                          ? "Being processed now"
-                          : `You are #${myQueuePosition} in the queue`}
-                        {queueWaitingCount != null && queueWaitingCount > 1 ? ` · ${queueWaitingCount} in queue` : ""}
+                          ? t.beingProcessedNow
+                          : t.youAreInQueue.replace("{position}", String(myQueuePosition))}
+                        {queueWaitingCount != null && queueWaitingCount > 1 ? ` · ${t.inQueue.replace("{count}", String(queueWaitingCount))}` : ""}
                       </p>
                       <p className="queue-summary">
-                        {myQueueEntry.summary_th || myQueueEntry.summary}
+                        {language === "th" && myQueueEntry.summary_th ? myQueueEntry.summary_th : myQueueEntry.summary}
                       </p>
                       <div className="queue-stages">
-                        {STAGE_ORDER.map(({ key, label }) => {
+                        {getStageOrder(t).map(({ key, label }) => {
                           const stage = myQueueEntry.stages?.[key];
                           if (!stage || stage === "none") return null;
                           return (
                             <span key={key} className={`queue-chip stage-${stage}`}>
-                              {label}: {stageLabel(stage)}
+                              {label}: {stageLabel(stage, t)}
                             </span>
                           );
                         })}
@@ -832,17 +975,15 @@ export default function App() {
                     </>
                   ) : job.phase === "uploading" || job.phase === "processing" ? (
                     <p className="queue-empty">
-                      <strong>{job.name || "Unnamed"}</strong> · Starting…
+                      <strong>{job.name || "Unnamed"}</strong> · {t.starting}
                     </p>
                   ) : job.phase === "done" ? (
                     <p className="queue-empty">
-                      <strong>{job.name || "Unnamed"}</strong> · Analysis is
-                      complete.
+                      <strong>{job.name || "Unnamed"}</strong> · {t.analysisComplete}
                     </p>
                   ) : job.phase === "error" ? (
                     <p className="queue-empty">
-                      <strong>{job.name || "Unnamed"}</strong> · Analysis stopped.
-                      Check the status message above.
+                      <strong>{job.name || "Unnamed"}</strong> · {t.analysisStopped}
                     </p>
                   ) : null}
                 </div>
@@ -851,7 +992,7 @@ export default function App() {
             {queueError ? <p className="queue-error">{queueError}</p> : null}
             {queueUpdatedAt ? (
               <p className="queue-meta">
-                Updated {new Date(queueUpdatedAt).toLocaleTimeString()}
+                {t.updated} {new Date(queueUpdatedAt).toLocaleTimeString()}
               </p>
             ) : null}
           </>
