@@ -87,6 +87,9 @@ const TRANSLATIONS = {
     queuedGroupId: "Queued. Group ID: {groupId}\nPolling status…",
     resumingJob: "Resuming job…",
     requestTimedOut: "Request timed out",
+    uploadingProgress: "Uploading {percent}% ({uploaded} / {total} MB)",
+    uploadSpeed: "{speed} MB/s",
+    uploadTimeRemaining: "~{time} remaining",
   },
   th: {
     siteName: "AI People Reader — วิเคราะห์ผู้นำเสนอ",
@@ -154,6 +157,9 @@ const TRANSLATIONS = {
     queuedGroupId: "จัดคิวแล้ว รหัสกลุ่ม: {groupId}\nกำลังตรวจสอบสถานะ…",
     resumingJob: "กำลังดำเนินการงานต่อ…",
     requestTimedOut: "หมดเวลาคำขอ",
+    uploadingProgress: "กำลังอัปโหลด {percent}% ({uploaded} / {total} MB)",
+    uploadSpeed: "{speed} MB/s",
+    uploadTimeRemaining: "~{time} เหลืออีก",
   },
 };
 
@@ -173,6 +179,13 @@ type JobState = {
   inFlight: boolean;
   pollErrorCount: number;
   reconnecting: boolean;
+  uploadProgress?: {
+    percent: number;
+    uploadedBytes: number;
+    totalBytes: number;
+    speed?: number;
+    timeRemaining?: number;
+  };
 };
 
 /** Partner accounts that get report + skeleton only (no dots video). */
@@ -590,7 +603,16 @@ export default function App() {
             const job = prev.get(tempGroupId);
             if (!job) return prev;
             const next = new Map(prev);
-            next.set(tempGroupId, { ...job, message: msg });
+            next.set(tempGroupId, { ...job, message: msg, uploadProgress: undefined });
+            return next;
+          });
+        },
+        onProgress: (progress) => {
+          setJobs((prev) => {
+            const job = prev.get(tempGroupId);
+            if (!job) return prev;
+            const next = new Map(prev);
+            next.set(tempGroupId, { ...job, uploadProgress: progress });
             return next;
           });
         },
@@ -872,9 +894,35 @@ export default function App() {
                   </span>
                 </div>
                 {job.reconnecting ? (
-                  <div className="status">Reconnecting…</div>
+                  <div className="status">{t.reconnecting}</div>
                 ) : job.message ? (
-                  <div className={`status ${statusClass}`}>{job.message}</div>
+                  <div className={`status ${statusClass}`}>
+                    {job.message}
+                    {job.uploadProgress && job.phase === "uploading" && (
+                      <div className="upload-progress">
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill" 
+                            style={{ width: `${job.uploadProgress.percent}%` }}
+                          />
+                        </div>
+                        <div className="progress-text">
+                          {t.uploadingProgress
+                            .replace("{percent}", String(job.uploadProgress.percent))
+                            .replace("{uploaded}", (job.uploadProgress.uploadedBytes / (1024 * 1024)).toFixed(1))
+                            .replace("{total}", (job.uploadProgress.totalBytes / (1024 * 1024)).toFixed(1))}
+                          {job.uploadProgress.speed != null && job.uploadProgress.timeRemaining != null && (
+                            <span className="progress-details">
+                              {" · "}
+                              {t.uploadSpeed.replace("{speed}", String(job.uploadProgress.speed))}
+                              {" · "}
+                              {t.uploadTimeRemaining.replace("{time}", `${job.uploadProgress.timeRemaining}s`)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : null}
                 {links.length > 0 ? (
                   <div className="downloads">
