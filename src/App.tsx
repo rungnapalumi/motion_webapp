@@ -764,7 +764,22 @@ export default function App() {
                 (item) => item.group_id === job.group_id,
               );
               const myQueueEntry = myQueueIndex >= 0 ? queue[myQueueIndex] : null;
-              const myQueuePosition = myQueueIndex >= 0 ? myQueueIndex + 1 : null;
+              
+              let myQueuePosition: number | null = null;
+              let queueWaitingCount: number | null = null;
+              
+              if (myQueueEntry) {
+                if (myQueueEntry.waiting_position != null && myQueueEntry.waiting_count != null) {
+                  myQueuePosition = myQueueEntry.waiting_position;
+                  queueWaitingCount = myQueueEntry.waiting_count;
+                } else {
+                  const nonProcessingAhead = queue
+                    .slice(0, myQueueIndex)
+                    .filter(item => !item.is_processing).length;
+                  myQueuePosition = nonProcessingAhead + 1;
+                  queueWaitingCount = queue.filter(item => !item.is_processing).length;
+                }
+              }
 
               return (
                 <div key={job.group_id} className="queue-mine">
@@ -773,10 +788,10 @@ export default function App() {
                       <p className="queue-position">
                         <strong>{job.name || "Unnamed"}</strong>
                         {" · "}
-                        {myQueuePosition === 1 && myQueueEntry.is_processing
-                          ? "You are being processed now"
+                        {myQueueEntry.is_processing
+                          ? "Being processed now"
                           : `You are #${myQueuePosition} in the queue`}
-                        {queue.length > 1 ? ` · ${queue.length} in queue` : ""}
+                        {queueWaitingCount != null && queueWaitingCount > 1 ? ` · ${queueWaitingCount} in queue` : ""}
                       </p>
                       <p className="queue-summary">
                         {myQueueEntry.summary_th || myQueueEntry.summary}
@@ -795,8 +810,7 @@ export default function App() {
                     </>
                   ) : job.phase === "uploading" || job.phase === "processing" ? (
                     <p className="queue-empty">
-                      <strong>{job.name || "Unnamed"}</strong> · Finding your place
-                      in the queue…
+                      <strong>{job.name || "Unnamed"}</strong> · Starting…
                     </p>
                   ) : job.phase === "done" ? (
                     <p className="queue-empty">
