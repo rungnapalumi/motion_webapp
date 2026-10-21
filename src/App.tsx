@@ -32,6 +32,8 @@ type JobState = {
   pollInterval: number | null;
   abortController: AbortController | null;
   inFlight: boolean;
+  pollErrorCount: number;
+  reconnecting: boolean;
 };
 
 /** Partner accounts that get report + skeleton only (no dots video). */
@@ -188,7 +190,7 @@ export default function App() {
     if (!currentJob) return;
 
     try {
-      const data = await getJobStatus(groupId, currentJob.jobIds, 15000);
+      const data = await getJobStatus(groupId, currentJob.jobIds, 30000);
       setJobs((prev) => {
         const job = prev.get(groupId);
         if (!job) return prev;
@@ -223,39 +225,50 @@ export default function App() {
           pollInterval: shouldStop ? null : job.pollInterval,
           abortController: null,
           inFlight: false,
+          pollErrorCount: 0,
+          reconnecting: false,
         });
         return next;
       });
     } catch (err) {
-      if ((err as Error).name === "AbortError") {
-        // Timeout or manual abort, retry next interval
-        setJobs((prev) => {
-          const job = prev.get(groupId);
-          if (!job) return prev;
-          const next = new Map(prev);
-          next.set(groupId, { ...job, abortController: null, inFlight: false });
-          return next;
-        });
-      } else {
-        // Network or other error
-        setJobs((prev) => {
-          const job = prev.get(groupId);
-          if (!job) return prev;
+      const isAbortError = (err as Error).name === "AbortError";
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      
+      setJobs((prev) => {
+        const job = prev.get(groupId);
+        if (!job) return prev;
+        
+        const newErrorCount = job.pollErrorCount + 1;
+        const FAILURE_THRESHOLD = 3;
+        
+        if (newErrorCount >= FAILURE_THRESHOLD) {
+          if (job.pollInterval != null) {
+            window.clearInterval(job.pollInterval);
+          }
           const next = new Map(prev);
           next.set(groupId, {
             ...job,
             phase: "error",
-            message: err instanceof Error ? err.message : String(err),
+            message: isAbortError ? "Request timed out" : errorMsg,
             abortController: null,
             inFlight: false,
             pollInterval: null,
+            pollErrorCount: newErrorCount,
+            reconnecting: false,
           });
           return next;
-        });
-        if (currentJob.pollInterval != null) {
-          window.clearInterval(currentJob.pollInterval);
         }
-      }
+        
+        const next = new Map(prev);
+        next.set(groupId, {
+          ...job,
+          abortController: null,
+          inFlight: false,
+          pollErrorCount: newErrorCount,
+          reconnecting: true,
+        });
+        return next;
+      });
     }
   };
 
@@ -297,6 +310,8 @@ export default function App() {
         pollInterval: null,
         abortController: null,
         inFlight: false,
+        pollErrorCount: 0,
+        reconnecting: false,
       });
     }
     setJobs(newJobs);
@@ -385,6 +400,8 @@ export default function App() {
       pollInterval: null,
       abortController: null,
       inFlight: false,
+      pollErrorCount: 0,
+      reconnecting: false,
     };
     setJobs((prev) => new Map(prev).set(tempGroupId, newJob));
 
@@ -449,6 +466,8 @@ export default function App() {
           pollInterval: null,
           abortController: null,
           inFlight: false,
+          pollErrorCount: 0,
+          reconnecting: false,
         });
         return next;
       });
@@ -697,7 +716,9 @@ export default function App() {
                     {new Date(job.created_at).toLocaleString()}
                   </span>
                 </div>
-                {job.message ? (
+                {job.reconnecting ? (
+                  <div className="status">Reconnecting…</div>
+                ) : job.message ? (
                   <div className={`status ${statusClass}`}>{job.message}</div>
                 ) : null}
                 {links.length > 0 ? (
