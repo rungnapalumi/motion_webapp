@@ -79,6 +79,9 @@ export type QueueEntry = {
     dots?: QueueStage;
   };
   is_processing?: boolean;
+  waiting_position?: number;
+  waiting_count?: number;
+  processing_count?: number;
 };
 
 export type QueueNowWorking = {
