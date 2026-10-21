@@ -90,6 +90,8 @@ const TRANSLATIONS = {
     uploadingProgress: "Uploading {percent}% ({uploaded} / {total} MB)",
     uploadSpeed: "{speed} MB/s",
     uploadTimeRemaining: "~{time} remaining",
+    compressingVideo: "Compressing video {percent}%",
+    compressionComplete: "Compression complete: {originalMB} MB → {compressedMB} MB",
   },
   th: {
     siteName: "AI People Reader — วิเคราะห์ผู้นำเสนอ",
@@ -160,6 +162,8 @@ const TRANSLATIONS = {
     uploadingProgress: "กำลังอัปโหลด {percent}% ({uploaded} / {total} MB)",
     uploadSpeed: "{speed} MB/s",
     uploadTimeRemaining: "~{time} เหลืออีก",
+    compressingVideo: "กำลังย่อขนาดวิดีโอ {percent}%",
+    compressionComplete: "ย่อขนาดเสร็จสิ้น: {originalMB} MB → {compressedMB} MB",
   },
 };
 
