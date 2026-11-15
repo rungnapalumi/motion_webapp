@@ -30,6 +30,7 @@ const TRANSLATIONS = {
     guideSize: "Recommended video size 480 x 854 in MP4 or MOV. Video should not exceed 200 MB. Higher resolution may result in delay in result download.",
     guideClothing: "Avoid wearing white, black, large prints, loose clothing or same color as the wall behind you.",
     guideMovement: "Move and use hand gesture naturally. Remember AI People Reader is analyzing whole body movement.",
+    guideDuration: "Your video should be at least 90 seconds.",
     presentationObjectives: "Presentation Objectives",
     objectivesSee: "If you want to see how you present and how others experience you, use a speech you already have.",
     objectivesRehear: "If you want to rehearse and see how engaging you are, try a presentation that is about sharing information, introducing a new concept or getting a point across to your team.",
@@ -102,6 +103,7 @@ const TRANSLATIONS = {
     guideSize: "ขนาดวิดีโอที่แนะนำคือ 480 x 854 ในรูปแบบ MP4 หรือ MOV วิดีโอต้องไม่เกิน 200 MB ความละเอียดสูงอาจทำให้ดาวน์โหลดผลล่าช้า",
     guideClothing: "หลีกเลี่ยงการสวมเสื้อผ้าสีขาว สีดำ ลายใหญ่ เสื้อผ้าหลวม หรือสีเดียวกับผนังด้านหลังคุณ",
     guideMovement: "เคลื่อนไหวและใช้ท่าทางมืออย่างเป็นธรรมชาติ จำไว้ว่า AI People Reader กำลังวิเคราะห์การเคลื่อนไหวของร่างกายทั้งหมด",
+    guideDuration: "วิดีโอควรมีความยาวอย่างน้อย 90 วินาที",
     presentationObjectives: "วัตถุประสงค์การนำเสนอ",
     objectivesSee: "หากคุณต้องการดูว่าคุณนำเสนออย่างไรและผู้อื่นมองคุณอย่างไร ให้ใช้สุนทรพจน์ที่คุณมีอยู่แล้ว",
     objectivesRehear: "หากคุณต้องการซ้อมและดูว่าคุณน่าสนใจแค่ไหน ลองนำเสนอที่เกี่ยวกับการแบ่งปันข้อมูล แนะนำแนวคิดใหม่ หรือสื่อสารประเด็นให้ทีมของคุณ",
@@ -757,6 +759,7 @@ export default function App() {
           <li>{t.guideSize}</li>
           <li>{t.guideClothing}</li>
           <li>{t.guideMovement}</li>
+          <li>{t.guideDuration}</li>
         </ul>
       </section>
 
