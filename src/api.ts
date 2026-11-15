@@ -329,23 +329,29 @@ async function multipartUpload(
       });
     }
     
-    const runningUploads: Array<Promise<void>> = [];
+    // Keep at most CONCURRENT_UPLOADS parts in flight. Each promise removes
+    // itself from the set only when it has actually settled, so every part is
+    // awaited before we ask S3 to assemble the file.
+    const running = new Set<Promise<void>>();
     for (const task of queue) {
-      const promise = task();
-      runningUploads.push(promise);
-      
-      if (runningUploads.length >= CONCURRENT_UPLOADS) {
-        await Promise.race(runningUploads);
-        runningUploads.splice(
-          runningUploads.findIndex((p) => p === promise),
-          1,
-        );
+      const p: Promise<void> = task().finally(() => {
+        running.delete(p);
+      });
+      running.add(p);
+      if (running.size >= CONCURRENT_UPLOADS) {
+        await Promise.race(running);
       }
     }
     
-    await Promise.all(runningUploads);
+    await Promise.all(running);
     
     uploadedParts.sort((a, b) => a.part_number - b.part_number);
+    
+    if (uploadedParts.length !== parts.length) {
+      throw new Error(
+        `Upload incomplete: ${uploadedParts.length} of ${parts.length} parts uploaded. Please try again.`,
+      );
+    }
     
     const completeFd = new FormData();
     completeFd.append("group_id", groupId);
