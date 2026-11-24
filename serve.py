@@ -15,7 +15,7 @@ DEFAULT_QUOTA = 200
 # Per-username overrides; everyone else keeps DEFAULT_QUOTA.
 ACCOUNT_QUOTAS = {}
 ACCOUNTS = {f"aipeoplereader{i:02d}": f"partner{i:02d}" for i in range(1, 11)}
-ACCOUNTS.update({"Alisa": "Founder", "Rungnapa": "Co Founder", "The Mall": "The Mall", "KSDMP": "KSDMP"})
+ACCOUNTS.update({"Alisa": "Founder", "Rungnapa": "Co Founder", "The Mall": "Pilot Group 2026", "KSDMP": "KSDMP"})
 S3_KEY = os.environ.get("MOTION_WEBAPP_S3_KEY", "motion_webapp/quotas.json").strip()
 STORE_LOCK = threading.Lock()
 
